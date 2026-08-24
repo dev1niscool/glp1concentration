@@ -1,4 +1,6 @@
-export type CompoundId = 'semaglutide' | 'tirzepatide';
+export type CompoundId = 'semaglutide' | 'tirzepatide' | 'retatrutide';
+export type DoseTime = 'morning' | 'afternoon' | 'night';
+export type ModelOutput = 'concentration' | 'amount';
 
 export type Regimen = {
   id: number;
@@ -6,6 +8,7 @@ export type Regimen = {
   doseMg: number;
   startWeek: number;
   endWeek: number;
+  timeOfDay: DoseTime;
 };
 
 export type CompoundProfile = {
@@ -14,8 +17,8 @@ export type CompoundProfile = {
   brands: string;
   doses: number[];
   halfLifeDays: number;
-  absorptionRatePerHour: number;
-  apparentVolumeLiters: number;
+  absorptionRatePerHour?: number;
+  apparentVolumeLiters?: number;
   modelNote: string;
   color: string;
   fill: string;
@@ -46,9 +49,29 @@ export const COMPOUNDS: Record<CompoundId, CompoundProfile> = {
     color: '#a6cf27',
     fill: 'rgba(181, 220, 55, 0.18)',
   },
+  retatrutide: {
+    id: 'retatrutide',
+    name: 'Retatrutide',
+    brands: 'Investigational; not FDA approved',
+    doses: [],
+    halfLifeDays: 6,
+    modelNote: 'Phase 2 approximate half-life; amount-remaining model only',
+    color: '#a85e35',
+    fill: 'rgba(168, 94, 53, 0.18)',
+  },
 };
 
 export const HOURS_PER_WEEK = 168;
+export const DOSE_TIME_OFFSETS: Record<DoseTime, number> = {
+  morning: 6,
+  afternoon: 12,
+  night: 18,
+};
+export const DOSE_TIME_LABELS: Record<DoseTime, string> = {
+  morning: 'Morning · 6:00 AM',
+  afternoon: 'Afternoon · 12:00 PM',
+  night: 'Night · 6:00 PM',
+};
 
 /**
  * One-compartment, first-order absorption and elimination estimate after a
@@ -63,25 +86,54 @@ export function doseConcentrationNgMl(
   if (hoursAfterDose < 0) return 0;
   const profile = COMPOUNDS[compound];
   const ka = profile.absorptionRatePerHour;
+  const volume = profile.apparentVolumeLiters;
+  if (!ka || !volume) {
+    throw new Error(`${profile.name} does not have a supported plasma-concentration model.`);
+  }
   const ke = Math.log(2) / (profile.halfLifeDays * 24);
-  const scale = (doseMg * ka * 1000) / (profile.apparentVolumeLiters * (ka - ke));
+  const scale = (doseMg * ka * 1000) / (volume * (ka - ke));
   return Math.max(0, scale * (Math.exp(-ke * hoursAfterDose) - Math.exp(-ka * hoursAfterDose)));
 }
 
 export function regimenConcentrationNgMl(regimen: Regimen, timelineHour: number): number {
   let total = 0;
   for (let week = regimen.startWeek; week <= regimen.endWeek; week += 1) {
-    const doseHour = (week - 1) * HOURS_PER_WEEK;
+    const doseHour = (week - 1) * HOURS_PER_WEEK + DOSE_TIME_OFFSETS[regimen.timeOfDay];
     total += doseConcentrationNgMl(regimen.compound, regimen.doseMg, timelineHour - doseHour);
   }
   return total;
 }
 
-export function sampleRegimen(regimen: Regimen, totalWeeks: number, stepHours = 6): number[] {
+export function doseAmountRemainingMg(doseMg: number, halfLifeDays: number, hoursAfterDose: number): number {
+  if (hoursAfterDose < 0) return 0;
+  return doseMg * 2 ** (-hoursAfterDose / (halfLifeDays * 24));
+}
+
+export function regimenAmountRemainingMg(regimen: Regimen, timelineHour: number): number {
+  let total = 0;
+  for (let week = regimen.startWeek; week <= regimen.endWeek; week += 1) {
+    const doseHour = (week - 1) * HOURS_PER_WEEK + DOSE_TIME_OFFSETS[regimen.timeOfDay];
+    total += doseAmountRemainingMg(
+      regimen.doseMg,
+      COMPOUNDS[regimen.compound].halfLifeDays,
+      timelineHour - doseHour,
+    );
+  }
+  return total;
+}
+
+export function sampleRegimen(
+  regimen: Regimen,
+  totalWeeks: number,
+  stepHours = 6,
+  output: ModelOutput = 'concentration',
+): number[] {
   const lastHour = totalWeeks * HOURS_PER_WEEK;
   const samples: number[] = [];
   for (let hour = 0; hour <= lastHour; hour += stepHours) {
-    samples.push(regimenConcentrationNgMl(regimen, hour));
+    samples.push(output === 'amount'
+      ? regimenAmountRemainingMg(regimen, hour)
+      : regimenConcentrationNgMl(regimen, hour));
   }
   return samples;
 }
