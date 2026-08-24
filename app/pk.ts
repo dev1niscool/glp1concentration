@@ -16,6 +16,7 @@ export type CompoundProfile = {
   halfLifeDays: number;
   absorptionRatePerHour: number;
   apparentVolumeLiters: number;
+  modelNote: string;
   color: string;
   fill: string;
 };
@@ -26,9 +27,10 @@ export const COMPOUNDS: Record<CompoundId, CompoundProfile> = {
     name: 'Semaglutide',
     brands: 'Ozempic / Wegovy',
     doses: [0.25, 0.5, 1, 1.7, 2.4],
-    halfLifeDays: 7,
+    halfLifeDays: 7.37,
     absorptionRatePerHour: 0.0286,
     apparentVolumeLiters: 12.2,
+    modelNote: 'Petri 2018 one-compartment population estimate',
     color: '#174c38',
     fill: 'rgba(60, 124, 86, 0.18)',
   },
@@ -37,9 +39,10 @@ export const COMPOUNDS: Record<CompoundId, CompoundProfile> = {
     name: 'Tirzepatide',
     brands: 'Mounjaro / Zepbound',
     doses: [2.5, 5, 7.5, 10, 12.5, 15],
-    halfLifeDays: 5,
+    halfLifeDays: 5.4,
     absorptionRatePerHour: 0.0373,
     apparentVolumeLiters: 10.3,
+    modelNote: 'Schneck 2024 population mean reduced to one compartment',
     color: '#a6cf27',
     fill: 'rgba(181, 220, 55, 0.18)',
   },

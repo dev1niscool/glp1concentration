@@ -10,6 +10,7 @@ import {
   sampleRegimen,
   trapezoidAuc,
 } from './pk';
+import { SiteFooter, SiteHeader } from './site-chrome';
 
 type PlotMode = 'accumulate' | 'compare';
 
@@ -400,10 +401,7 @@ export default function Home() {
 
   return (
     <main className="site-shell">
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="Half Life home"><span className="brand-mark" aria-hidden="true">H</span><span>HALF LIFE</span></a>
-        <a className="science-chip" href="#method">Science-backed PK model <span aria-hidden="true">↘</span></a>
-      </header>
+      <SiteHeader active="plotter" />
 
       <section className="hero" id="top">
         <div>
@@ -497,37 +495,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="method-section" id="method">
-        <div className="method-intro">
-          <p className="eyebrow">Under the curve</p>
-          <h2>A useful estimate.<br />Not a blood test.</h2>
-          <p>This tool uses a one-compartment, first-order absorption and elimination model. Each weekly injection is added to what remains from prior doses, which is why the curve builds toward steady state.</p>
-        </div>
-        <div className="method-cards">
-          <article><span>SEMA</span><h3>Semaglutide</h3><strong>~7 day half-life</strong><p>Model inputs: k<sub>a</sub> 0.0286 h⁻¹ and apparent V/F 12.2 L. FDA labeling reports peak concentration 1–3 days after injection and steady state after 4–5 weeks.</p></article>
-          <article><span>TIRZ</span><h3>Tirzepatide</h3><strong>~5 day half-life</strong><p>Model inputs: k<sub>a</sub> 0.0373 h⁻¹ and apparent V/F 10.3 L. FDA labeling reports peak concentration 8–72 hours after injection and steady state after 4 weeks.</p></article>
-        </div>
-      </section>
-
-      <section className="caveat-section">
-        <div><span className="caveat-icon" aria-hidden="true">i</span><h2>Know the limits</h2></div>
-        <div>
-          <p>Actual exposure varies with body size, injection timing and site, formulation, individual pharmacokinetics, adherence, and other factors. This visualization is educational and must not be used to choose, change, combine, or stop a medication. Ask a licensed clinician or pharmacist for personal guidance.</p>
-          <p><strong>Rybelsus note:</strong> Rybelsus is daily oral semaglutide with different doses and highly variable absorption, so it is not represented by this once-weekly injection model.</p>
-        </div>
-      </section>
-
-      <section className="sources-section" aria-labelledby="sources-title">
-        <div><p className="eyebrow">Evidence base</p><h2 id="sources-title">Sources</h2></div>
-        <ol>
-          <li><a href="https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=979e4df4-0597-48ea-b51c-0f699fa6d166" target="_blank" rel="noreferrer"><span>01</span><p><strong>Ozempic prescribing information</strong><small>FDA / DailyMed · Pharmacokinetics §12.3</small></p><b aria-hidden="true">↗</b></a></li>
-          <li><a href="https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=78aad975-4971-49fa-b4b0-6aa39f76d2e7" target="_blank" rel="noreferrer"><span>02</span><p><strong>Mounjaro prescribing information</strong><small>FDA / DailyMed · Pharmacokinetics §12.3</small></p><b aria-hidden="true">↗</b></a></li>
-          <li><a href="https://doi.org/10.1007/s13300-018-0458-5" target="_blank" rel="noreferrer"><span>03</span><p><strong>Semaglutide population PK analysis</strong><small>Petri et al. · Diabetes Therapy · 2018</small></p><b aria-hidden="true">↗</b></a></li>
-          <li><a href="https://doi.org/10.1002/psp4.13099" target="_blank" rel="noreferrer"><span>04</span><p><strong>Tirzepatide population PK analysis</strong><small>Schneck et al. · CPT: PSP · 2024</small></p><b aria-hidden="true">↗</b></a></li>
-        </ol>
-      </section>
-
-      <footer><a className="brand" href="#top"><span className="brand-mark" aria-hidden="true">H</span><span>HALF LIFE</span></a><p>Educational visualization. Not medical advice.</p><small>Made by Devin Kancherla</small></footer>
+      <SiteFooter />
     </main>
   );
 }

@@ -10,6 +10,7 @@
     "build": "vinext build",
     "build:pages": "next build",
     "start": "vinext start",
+    "test:pk": "node --experimental-strip-types --test tests/pk.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
   "dependencies": {

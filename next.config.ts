@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   ...(isGitHubPages
     ? {
         output: 'export',
+        trailingSlash: true,
         basePath: '/glp-1-plotter',
         assetPrefix: '/glp-1-plotter/',
       }
