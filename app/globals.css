@@ -234,21 +234,28 @@ input:hover, select:hover { border-color: #9aaa9e; }
 .equation-card { margin-top: 30px; padding: 25px 28px; border: 1px solid #c8d3c8; border-radius: 15px; background: #17261f; color: white; }
 .equation-card span, .equation-grid span { display: block; margin-bottom: 14px; color: #aebaaf; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
 .equation-card small { display: block; margin-top: 11px; color: #9caaa1; font-size: 10px; }
-.math-scroll { overflow-x: auto; padding: 5px 2px 8px; scrollbar-color: #496054 transparent; }
+.math-scroll { min-width: 0; padding: 5px 2px 8px; }
 .math-stack { display: grid; gap: 17px; }
-.math-display, .math-mini { width: max-content; min-width: 100%; color: var(--lime); font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', Georgia, serif; font-size: clamp(19px,2.1vw,26px); }
+.math-pair-grid { min-width: 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 15px 26px; align-items: center; }
+.math-three-up { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.math-wide { grid-column: 1 / -1; }
+.math-display, .math-mini { display: block; width: 100%; min-width: 0; max-width: 100%; color: var(--lime); font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', Georgia, serif; font-size: clamp(19px,2.1vw,26px); }
 .math-display mo, .math-mini mo { padding-inline: .08em; }
 .math-display mfrac, .math-mini mfrac { padding-inline: .12em; }
-.math-secondary { width: max-content; min-width: 100%; color: #c2d8ca; font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', Georgia, serif; font-size: clamp(15px,1.55vw,19px); }
+.math-secondary { display: block; width: 100%; min-width: 0; max-width: 100%; color: #c2d8ca; font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', Georgia, serif; font-size: clamp(15px,1.55vw,19px); }
 .math-emphasis { padding-top: 16px; border-top: 1px solid rgba(216,255,114,.22); }
 .math-piecewise mtd { padding: .08em .35em; }
 .parameter-math .math-display { font-size: clamp(16px,1.55vw,20px); }
+.math-parameter-group { display: grid; gap: 13px; padding-top: 2px; }
+.math-parameter-group + .math-parameter-group { padding-top: 17px; border-top: 1px solid rgba(216,255,114,.18); }
+.math-parameter-group > strong { color: #c2d8ca; font: 700 10px Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
 .surrogate-card { margin-top: 14px; background: #263c31; }
 .model-distinction { margin: 17px 0 0; padding: 17px 20px; border-left: 3px solid #9fc94f; background: rgba(255,255,255,.47); color: var(--muted); font-size: 11px; line-height: 1.7; }
 .model-distinction strong { color: var(--ink); }
 .equation-grid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #c6d0c6; border-left: 1px solid #c6d0c6; margin-top: 18px; }
-.equation-grid > div { min-width: 0; min-height: 180px; padding: 23px; border-right: 1px solid #c6d0c6; border-bottom: 1px solid #c6d0c6; overflow-x: auto; }
-.equation-grid .math-mini { min-width: max-content; color: #1c523c; font-size: 18px; }
+.equation-grid > div { min-width: 0; min-height: 180px; padding: 23px; border-right: 1px solid #c6d0c6; border-bottom: 1px solid #c6d0c6; }
+.equation-grid .math-mini { color: #1c523c; font-size: 18px; }
+.math-mini-stack { min-width: 0; display: grid; gap: 11px; }
 .equation-grid p { max-width: 320px; margin: 18px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
 .process-list { margin: 35px 0 0; padding: 0; list-style: none; }
 .process-list li { display: grid; grid-template-columns: 30px 1fr; gap: 14px; padding: 18px 0; border-bottom: 1px solid #ced7ce; }
@@ -337,8 +344,11 @@ footer p { margin: 0; font-size: 10px; }
   .equation-grid, .parameter-notes, .check-grid { grid-template-columns: 1fr; }
   .parameter-notes article + article { padding-left: 0; border-left: 0; border-top: 1px solid #bdc9be; }
   .equation-card { padding: 21px 18px; }
-  .math-display { font-size: 18px; }
-  .math-secondary { font-size: 15px; }
+  .math-pair-grid, .math-three-up { grid-template-columns: 1fr; gap: 13px; }
+  .math-display { font-size: clamp(14px,4.25vw,17px); }
+  .math-secondary { font-size: clamp(13px,3.8vw,15px); }
+  .math-wide, .math-piecewise { font-size: clamp(12px,3.7vw,15px); }
+  .equation-grid .math-mini { font-size: clamp(14px,4.2vw,16px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

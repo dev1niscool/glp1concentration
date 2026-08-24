@@ -104,12 +104,18 @@ export default function MethodologyPage() {
           <p className="method-lede">Semaglutide and tirzepatide default to a simpler one-compartment estimate and offer an optional two-compartment population model based on richly sampled clinical pharmacology data. Retatrutide has only the fitted one-compartment surrogate because a parameter-complete two-compartment population model is not available for this calculator.</p>
           <div className="equation-card">
             <span>One-compartment option — one injection</span>
-            <div className="math-scroll">
-              <math className="math-display" display="block" aria-label="C sub i of t equals dose sub i times 1000 over apparent volume, times k a over k a minus k e, times the difference of the elimination and absorption exponentials">
-                <msub><mi>C</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo>
+            <div className="math-scroll math-stack">
+              <math className="math-display" display="block" aria-label="P sub i equals dose sub i times 1000 over apparent volume, times k a over k a minus k e">
+                <msub><mi>P</mi><mi>i</mi></msub><mo>=</mo>
                 <mfrac><mrow><msub><mi>D</mi><mi>i</mi></msub><mo>·</mo><mn>1000</mn></mrow><mrow><mi>V</mi><mo>/</mo><mi>F</mi></mrow></mfrac>
                 <mo>·</mo><mfrac><msub><mi>k</mi><mi>a</mi></msub><mrow><msub><mi>k</mi><mi>a</mi></msub><mo>−</mo><msub><mi>k</mi><mi>e</mi></msub></mrow></mfrac>
-                <mo>·</mo><mrow><mo>(</mo><msup><mi>e</mi><mrow><mo>−</mo><msub><mi>k</mi><mi>e</mi></msub><mi>Δt</mi></mrow></msup><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><msub><mi>k</mi><mi>a</mi></msub><mi>Δt</mi></mrow></msup><mo>)</mo></mrow>
+              </math>
+              <math className="math-display" display="block" aria-label="C sub i of t equals P sub i times the difference of the elimination and absorption exponentials">
+                <msub><mi>E</mi><mi>r</mi></msub><mo stretchy="false">(</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>rΔt</mi></mrow></msup>
+              </math>
+              <math className="math-display" display="block" aria-label="C sub i of t equals P sub i times E sub k e minus E sub k a">
+                <msub><mi>C</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mi>P</mi><mi>i</mi></msub>
+                <mrow><mo>[</mo><msub><mi>E</mi><msub><mi>k</mi><mi>e</mi></msub></msub><mo stretchy="false">(</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>−</mo><msub><mi>E</mi><msub><mi>k</mi><mi>a</mi></msub></msub><mo stretchy="false">(</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>]</mo></mrow>
               </math>
               <math className="math-secondary" display="block" aria-label="Delta t equals t minus dose time sub i and concentration is zero when delta t is less than zero">
                 <mi>Δt</mi><mo>=</mo><mi>t</mi><mo>−</mo><msub><mi>t</mi><mi>i</mi></msub><mo>;</mo>
@@ -121,16 +127,15 @@ export default function MethodologyPage() {
           <div className="equation-card">
             <span>Semaglutide and tirzepatide — two-compartment macro rates</span>
             <div className="math-scroll math-stack">
-              <math className="math-display" display="block" aria-label="k 10 equals clearance over central volume; k 12 equals intercompartmental clearance over central volume; k 21 equals intercompartmental clearance over peripheral volume">
-                <msub><mi>k</mi><mn>10</mn></msub><mo>=</mo><mfrac><mi>CL</mi><msub><mi>V</mi><mi>c</mi></msub></mfrac>
-                <mspace width="1.4em" /><msub><mi>k</mi><mn>12</mn></msub><mo>=</mo><mfrac><mi>Q</mi><msub><mi>V</mi><mi>c</mi></msub></mfrac>
-                <mspace width="1.4em" /><msub><mi>k</mi><mn>21</mn></msub><mo>=</mo><mfrac><mi>Q</mi><msub><mi>V</mi><mi>p</mi></msub></mfrac>
-              </math>
-              <math className="math-display" display="block" aria-label="alpha and beta equal one half of S plus or minus the square root of S squared minus four k 10 k 21, where S is the sum of k 10, k 12, and k 21">
-                <mi>S</mi><mo>=</mo><msub><mi>k</mi><mn>10</mn></msub><mo>+</mo><msub><mi>k</mi><mn>12</mn></msub><mo>+</mo><msub><mi>k</mi><mn>21</mn></msub>
-                <mspace width="1.4em" /><mi>α</mi><mo>,</mo><mi>β</mi><mo>=</mo>
-                <mfrac><mrow><mi>S</mi><mo>±</mo><msqrt><mrow><msup><mi>S</mi><mn>2</mn></msup><mo>−</mo><mn>4</mn><msub><mi>k</mi><mn>10</mn></msub><msub><mi>k</mi><mn>21</mn></msub></mrow></msqrt></mrow><mn>2</mn></mfrac>
-              </math>
+              <div className="math-pair-grid">
+                <math className="math-display" display="block" aria-label="k 10 equals clearance over central volume"><msub><mi>k</mi><mn>10</mn></msub><mo>=</mo><mfrac><mi>CL</mi><msub><mi>V</mi><mi>c</mi></msub></mfrac></math>
+                <math className="math-display" display="block" aria-label="k 12 equals Q over central volume"><msub><mi>k</mi><mn>12</mn></msub><mo>=</mo><mfrac><mi>Q</mi><msub><mi>V</mi><mi>c</mi></msub></mfrac></math>
+                <math className="math-display" display="block" aria-label="k 21 equals Q over peripheral volume"><msub><mi>k</mi><mn>21</mn></msub><mo>=</mo><mfrac><mi>Q</mi><msub><mi>V</mi><mi>p</mi></msub></mfrac></math>
+                <math className="math-display" display="block" aria-label="S equals the sum of k 10, k 12, and k 21"><mi>S</mi><mo>=</mo><msub><mi>k</mi><mn>10</mn></msub><mo>+</mo><msub><mi>k</mi><mn>12</mn></msub><mo>+</mo><msub><mi>k</mi><mn>21</mn></msub></math>
+                <math className="math-display math-wide" display="block" aria-label="alpha and beta equal one half of S plus or minus the square root of S squared minus four k 10 k 21">
+                  <mi>α</mi><mo>,</mo><mi>β</mi><mo>=</mo><mfrac><mrow><mi>S</mi><mo>±</mo><msqrt><mrow><msup><mi>S</mi><mn>2</mn></msup><mo>−</mo><mn>4</mn><msub><mi>k</mi><mn>10</mn></msub><msub><mi>k</mi><mn>21</mn></msub></mrow></msqrt></mrow><mn>2</mn></mfrac>
+                </math>
+              </div>
             </div>
             <small>The central and peripheral compartments exchange drug through Q; elimination occurs from the central compartment through CL.</small>
           </div>
@@ -140,35 +145,34 @@ export default function MethodologyPage() {
               <math className="math-display" display="block" aria-label="g of r and delta t equals k a over k a minus r times the difference of the r and k a exponentials">
                 <mi>g</mi><mo stretchy="false">(</mo><mi>r</mi><mo>,</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>=</mo>
                 <mfrac><msub><mi>k</mi><mi>a</mi></msub><mrow><msub><mi>k</mi><mi>a</mi></msub><mo>−</mo><mi>r</mi></mrow></mfrac>
-                <mrow><mo>(</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>rΔt</mi></mrow></msup><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><msub><mi>k</mi><mi>a</mi></msub><mi>Δt</mi></mrow></msup><mo>)</mo></mrow>
+                <mrow><mo>[</mo><msub><mi>E</mi><mi>r</mi></msub><mo stretchy="false">(</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>−</mo><msub><mi>E</mi><msub><mi>k</mi><mi>a</mi></msub></msub><mo stretchy="false">(</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>]</mo></mrow>
               </math>
-              <math className="math-display" display="block" aria-label="w alpha equals alpha minus k 21 over alpha minus beta, and w beta equals k 21 minus beta over alpha minus beta">
-                <msub><mi>w</mi><mi>α</mi></msub><mo>=</mo><mfrac><mrow><mi>α</mi><mo>−</mo><msub><mi>k</mi><mn>21</mn></msub></mrow><mrow><mi>α</mi><mo>−</mo><mi>β</mi></mrow></mfrac>
-                <mspace width="1.4em" /><msub><mi>w</mi><mi>β</mi></msub><mo>=</mo><mfrac><mrow><msub><mi>k</mi><mn>21</mn></msub><mo>−</mo><mi>β</mi></mrow><mrow><mi>α</mi><mo>−</mo><mi>β</mi></mrow></mfrac>
-              </math>
-              <math className="math-display math-emphasis" display="block" aria-label="C sub i of t equals bioavailability times dose sub i times 1000 over central volume times w alpha g of alpha delta t plus w beta g of beta delta t">
-                <msub><mi>C</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo>
-                <mfrac><mrow><mi>F</mi><msub><mi>D</mi><mi>i</mi></msub><mo>·</mo><mn>1000</mn></mrow><msub><mi>V</mi><mi>c</mi></msub></mfrac>
-                <mrow><mo>[</mo><msub><mi>w</mi><mi>α</mi></msub><mi>g</mi><mo stretchy="false">(</mo><mi>α</mi><mo>,</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>+</mo><msub><mi>w</mi><mi>β</mi></msub><mi>g</mi><mo stretchy="false">(</mo><mi>β</mi><mo>,</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>]</mo></mrow>
-              </math>
+              <div className="math-pair-grid">
+                <math className="math-display" display="block" aria-label="w alpha equals alpha minus k 21 over alpha minus beta"><msub><mi>w</mi><mi>α</mi></msub><mo>=</mo><mfrac><mrow><mi>α</mi><mo>−</mo><msub><mi>k</mi><mn>21</mn></msub></mrow><mrow><mi>α</mi><mo>−</mo><mi>β</mi></mrow></mfrac></math>
+                <math className="math-display" display="block" aria-label="w beta equals k 21 minus beta over alpha minus beta"><msub><mi>w</mi><mi>β</mi></msub><mo>=</mo><mfrac><mrow><msub><mi>k</mi><mn>21</mn></msub><mo>−</mo><mi>β</mi></mrow><mrow><mi>α</mi><mo>−</mo><mi>β</mi></mrow></mfrac></math>
+                <math className="math-display" display="block" aria-label="B sub i equals bioavailability times dose sub i times 1000 over central volume"><msub><mi>B</mi><mi>i</mi></msub><mo>=</mo><mfrac><mrow><mi>F</mi><msub><mi>D</mi><mi>i</mi></msub><mo>·</mo><mn>1000</mn></mrow><msub><mi>V</mi><mi>c</mi></msub></mfrac></math>
+                <math className="math-display math-wide" display="block" aria-label="R of delta t equals w alpha times g of alpha and delta t plus w beta times g of beta and delta t"><mi>R</mi><mo stretchy="false">(</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mi>w</mi><mi>α</mi></msub><mi>g</mi><mo stretchy="false">(</mo><mi>α</mi><mo>,</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>+</mo><msub><mi>w</mi><mi>β</mi></msub><mi>g</mi><mo stretchy="false">(</mo><mi>β</mi><mo>,</mo><mi>Δt</mi><mo stretchy="false">)</mo></math>
+                <math className="math-display math-emphasis math-wide" display="block" aria-label="C sub i of t equals B sub i times R of delta t"><msub><mi>C</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mi>B</mi><mi>i</mi></msub><mi>R</mi><mo stretchy="false">(</mo><mi>Δt</mi><mo stretchy="false">)</mo></math>
+              </div>
             </div>
             <small>The reference-parameter calculation uses this closed-form solution; body-size-adjusted graphs integrate the equivalent differential equations below.</small>
           </div>
           <div className="equation-card">
             <span>Changing body size — differential equations integrated by the plotter</span>
             <div className="math-scroll math-stack">
+              <math className="math-display" display="block" aria-label="J equals Q times central concentration minus peripheral concentration"><mi>J</mi><mo>=</mo><mi>Q</mi><mrow><mo>(</mo><msub><mi>C</mi><mi>c</mi></msub><mo>−</mo><msub><mi>C</mi><mi>p</mi></msub><mo>)</mo></mrow></math>
               <math className="math-display" display="block" aria-label="depot rate equals negative k a times depot amount">
                 <mfrac><mrow><mi>d</mi><msub><mi>A</mi><mi>d</mi></msub></mrow><mrow><mi>d</mi><mi>t</mi></mrow></mfrac><mo>=</mo><mo>−</mo><msub><mi>k</mi><mi>a</mi></msub><msub><mi>A</mi><mi>d</mi></msub>
               </math>
-              <math className="math-display" display="block" aria-label="central amount rate equals F k a depot amount minus clearance times central concentration minus Q times the central minus peripheral concentration difference">
+              <math className="math-display" display="block" aria-label="central amount rate equals F k a depot amount minus clearance times central concentration minus J">
                 <mfrac><mrow><mi>d</mi><msub><mi>A</mi><mi>c</mi></msub></mrow><mrow><mi>d</mi><mi>t</mi></mrow></mfrac><mo>=</mo>
-                <mi>F</mi><msub><mi>k</mi><mi>a</mi></msub><msub><mi>A</mi><mi>d</mi></msub><mo>−</mo><mi>CL</mi><msub><mi>C</mi><mi>c</mi></msub><mo>−</mo><mi>Q</mi><mrow><mo>(</mo><msub><mi>C</mi><mi>c</mi></msub><mo>−</mo><msub><mi>C</mi><mi>p</mi></msub><mo>)</mo></mrow>
+                <mi>F</mi><msub><mi>k</mi><mi>a</mi></msub><msub><mi>A</mi><mi>d</mi></msub><mo>−</mo><mi>CL</mi><msub><mi>C</mi><mi>c</mi></msub><mo>−</mo><mi>J</mi>
               </math>
-              <math className="math-display" display="block" aria-label="peripheral amount rate equals Q times the central minus peripheral concentration difference">
-                <mfrac><mrow><mi>d</mi><msub><mi>A</mi><mi>p</mi></msub></mrow><mrow><mi>d</mi><mi>t</mi></mrow></mfrac><mo>=</mo><mi>Q</mi><mrow><mo>(</mo><msub><mi>C</mi><mi>c</mi></msub><mo>−</mo><msub><mi>C</mi><mi>p</mi></msub><mo>)</mo></mrow>
-                <mspace width="1.4em" /><msub><mi>C</mi><mi>c</mi></msub><mo>=</mo><mfrac><msub><mi>A</mi><mi>c</mi></msub><msub><mi>V</mi><mi>c</mi></msub></mfrac>
-                <mspace width="1.1em" /><msub><mi>C</mi><mi>p</mi></msub><mo>=</mo><mfrac><msub><mi>A</mi><mi>p</mi></msub><msub><mi>V</mi><mi>p</mi></msub></mfrac>
-              </math>
+              <div className="math-pair-grid">
+                <math className="math-display" display="block" aria-label="peripheral amount rate equals J"><mfrac><mrow><mi>d</mi><msub><mi>A</mi><mi>p</mi></msub></mrow><mrow><mi>d</mi><mi>t</mi></mrow></mfrac><mo>=</mo><mi>J</mi></math>
+                <math className="math-display" display="block" aria-label="central concentration equals central amount over central volume"><msub><mi>C</mi><mi>c</mi></msub><mo>=</mo><mfrac><msub><mi>A</mi><mi>c</mi></msub><msub><mi>V</mi><mi>c</mi></msub></mfrac></math>
+                <math className="math-display" display="block" aria-label="peripheral concentration equals peripheral amount over peripheral volume"><msub><mi>C</mi><mi>p</mi></msub><mo>=</mo><mfrac><msub><mi>A</mi><mi>p</mi></msub><msub><mi>V</mi><mi>p</mi></msub></mfrac></math>
+              </div>
               <math className="math-secondary" display="block" aria-label="At each dose time, depot amount after the dose equals depot amount before the dose plus 1000 times dose in milligrams">
                 <msub><mi>A</mi><mi>d</mi></msub><mo stretchy="false">(</mo><msubsup><mi>t</mi><mi>i</mi><mo>+</mo></msubsup><mo stretchy="false">)</mo><mo>=</mo>
                 <msub><mi>A</mi><mi>d</mi></msub><mo stretchy="false">(</mo><msubsup><mi>t</mi><mi>i</mi><mo>−</mo></msubsup><mo stretchy="false">)</mo><mo>+</mo><mn>1000</mn><msub><mi>D</mi><mi>i</mi></msub>
@@ -179,17 +183,14 @@ export default function MethodologyPage() {
           <div className="equation-card">
             <span>Semaglutide — published body-weight covariates and fixed effects</span>
             <div className="math-scroll math-stack">
-              <math className="math-display" display="block" aria-label="Semaglutide clearance equals 0.0348 times body weight over 85 to the 1.01 power; Q equals 0.304 times the same scale">
-                <mi>CL</mi><mo>=</mo><mn>0.0348</mn><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>85</mn></mfrac><mo>)</mo></mrow><mn>1.01</mn></msup>
-                <mspace width="1.2em" /><mi>Q</mi><mo>=</mo><mn>0.304</mn><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>85</mn></mfrac><mo>)</mo></mrow><mn>1.01</mn></msup>
-              </math>
-              <math className="math-display" display="block" aria-label="Semaglutide central volume equals 3.59 times body weight over 85 to the 0.923 power; peripheral volume equals 4.10 times the same scale">
-                <msub><mi>V</mi><mi>c</mi></msub><mo>=</mo><mn>3.59</mn><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>85</mn></mfrac><mo>)</mo></mrow><mn>0.923</mn></msup>
-                <mspace width="1.2em" /><msub><mi>V</mi><mi>p</mi></msub><mo>=</mo><mn>4.10</mn><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>85</mn></mfrac><mo>)</mo></mrow><mn>0.923</mn></msup>
-              </math>
-              <math className="math-secondary" display="block" aria-label="Semaglutide bioavailability is 0.847 and absorption rate is 0.0253 per hour">
-                <mi>F</mi><mo>=</mo><mn>0.847</mn><mspace width="1.4em" /><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.0253</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup>
-              </math>
+              <div className="math-pair-grid">
+                <math className="math-display" display="block" aria-label="Semaglutide clearance equals 0.0348 times body weight over 85 to the 1.01 power"><mi>CL</mi><mo>=</mo><mn>0.0348</mn><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>85</mn></mfrac><mo>)</mo></mrow><mn>1.01</mn></msup></math>
+                <math className="math-display" display="block" aria-label="Semaglutide Q equals 0.304 times body weight over 85 to the 1.01 power"><mi>Q</mi><mo>=</mo><mn>0.304</mn><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>85</mn></mfrac><mo>)</mo></mrow><mn>1.01</mn></msup></math>
+                <math className="math-display" display="block" aria-label="Semaglutide central volume equals 3.59 times body weight over 85 to the 0.923 power"><msub><mi>V</mi><mi>c</mi></msub><mo>=</mo><mn>3.59</mn><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>85</mn></mfrac><mo>)</mo></mrow><mn>0.923</mn></msup></math>
+                <math className="math-display" display="block" aria-label="Semaglutide peripheral volume equals 4.10 times body weight over 85 to the 0.923 power"><msub><mi>V</mi><mi>p</mi></msub><mo>=</mo><mn>4.10</mn><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>85</mn></mfrac><mo>)</mo></mrow><mn>0.923</mn></msup></math>
+                <math className="math-secondary" display="block" aria-label="Semaglutide bioavailability is 0.847"><mi>F</mi><mo>=</mo><mn>0.847</mn></math>
+                <math className="math-secondary" display="block" aria-label="Semaglutide absorption rate is 0.0253 per hour"><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.0253</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math>
+              </div>
             </div>
             <small>The Overgaard et al. rich-sampling model uses an 85 kg reference. Body weight affects clearance, intercompartmental clearance, and both volumes; sex and height were not retained as important semaglutide covariates.</small>
           </div>
@@ -204,58 +205,65 @@ export default function MethodologyPage() {
                 <mtable columnalign="left left"><mtr><mtd><mfrac><mrow><mn>9270</mn><mi>BW</mi></mrow><mrow><mn>6680</mn><mo>+</mo><mn>216</mn><mi>BMI</mi></mrow></mfrac></mtd><mtd><mtext>male</mtext></mtd></mtr>
                 <mtr><mtd><mfrac><mrow><mn>9270</mn><mi>BW</mi></mrow><mrow><mn>8780</mn><mo>+</mo><mn>244</mn><mi>BMI</mi></mrow></mfrac></mtd><mtd><mtext>female</mtext></mtd></mtr></mtable>
               </math>
-              <math className="math-display" display="block" aria-label="clearance scale equals body weight over 70 to the 0.8 power, and volume scale equals fat free mass plus 0.482 times fat mass over 70">
+              <math className="math-display" display="block" aria-label="clearance scale equals body weight over 70 to the 0.8 power">
                 <msub><mi>s</mi><mi>CL</mi></msub><mo>=</mo><msup><mrow><mo>(</mo><mfrac><mi>BW</mi><mn>70</mn></mfrac><mo>)</mo></mrow><mn>0.8</mn></msup>
-                <mspace width="1.3em" /><msub><mi>s</mi><mi>V</mi></msub><mo>=</mo><mfrac><mrow><mi>FFM</mi><mo>+</mo><mn>0.482</mn><mrow><mo>(</mo><mi>BW</mi><mo>−</mo><mi>FFM</mi><mo>)</mo></mrow></mrow><mn>70</mn></mfrac>
               </math>
-              <math className="math-display" display="block" aria-label="Tirzepatide clearance, Q, central volume, and peripheral volume equal their fixed effects times the clearance or volume scale">
-                <mi>CL</mi><mo>=</mo><mn>0.0329</mn><msub><mi>s</mi><mi>CL</mi></msub>
-                <mspace width="1.1em" /><mi>Q</mi><mo>=</mo><mn>0.126</mn><msub><mi>s</mi><mi>CL</mi></msub>
-                <mspace width="1.1em" /><msub><mi>V</mi><mi>c</mi></msub><mo>=</mo><mn>2.47</mn><msub><mi>s</mi><mi>V</mi></msub>
-                <mspace width="1.1em" /><msub><mi>V</mi><mi>p</mi></msub><mo>=</mo><mn>3.98</mn><msub><mi>s</mi><mi>V</mi></msub>
+              <math className="math-display" display="block" aria-label="volume scale equals fat free mass plus 0.482 times fat mass over 70">
+                <msub><mi>s</mi><mi>V</mi></msub><mo>=</mo><mfrac><mrow><mi>FFM</mi><mo>+</mo><mn>0.482</mn><mrow><mo>(</mo><mi>BW</mi><mo>−</mo><mi>FFM</mi><mo>)</mo></mrow></mrow><mn>70</mn></mfrac>
               </math>
-              <math className="math-secondary" display="block" aria-label="Tirzepatide bioavailability is 0.80 and absorption rate is 0.0373 per hour">
-                <mi>F</mi><mo>=</mo><mn>0.80</mn><mspace width="1.4em" /><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.0373</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup>
-              </math>
+              <div className="math-pair-grid">
+                <math className="math-display" display="block" aria-label="Tirzepatide clearance equals 0.0329 times the clearance scale"><mi>CL</mi><mo>=</mo><mn>0.0329</mn><msub><mi>s</mi><mi>CL</mi></msub></math>
+                <math className="math-display" display="block" aria-label="Tirzepatide Q equals 0.126 times the clearance scale"><mi>Q</mi><mo>=</mo><mn>0.126</mn><msub><mi>s</mi><mi>CL</mi></msub></math>
+                <math className="math-display" display="block" aria-label="Tirzepatide central volume equals 2.47 times the volume scale"><msub><mi>V</mi><mi>c</mi></msub><mo>=</mo><mn>2.47</mn><msub><mi>s</mi><mi>V</mi></msub></math>
+                <math className="math-display" display="block" aria-label="Tirzepatide peripheral volume equals 3.98 times the volume scale"><msub><mi>V</mi><mi>p</mi></msub><mo>=</mo><mn>3.98</mn><msub><mi>s</mi><mi>V</mi></msub></math>
+                <math className="math-secondary" display="block" aria-label="Tirzepatide bioavailability is 0.80"><mi>F</mi><mo>=</mo><mn>0.80</mn></math>
+                <math className="math-secondary" display="block" aria-label="Tirzepatide absorption rate is 0.0373 per hour"><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.0373</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math>
+              </div>
             </div>
             <small>FFM = 9270BW/(6680+216BMI) for males or 9270BW/(8780+244BMI) for females. The volume equation is applied to both Vc and Vp.</small>
           </div>
           <div className="equation-card">
             <span>Default one-compartment parameter reductions</span>
             <div className="math-scroll math-stack parameter-math">
-              <math className="math-display" display="block" aria-label="Semaglutide half-life is 7.37 days, apparent volume is 12.2 liters, absorption rate is 0.0286 per hour, and apparent clearance is 0.0478 liters per hour">
-                <mtext>Semaglutide:</mtext><mspace width=".8em" /><msub><mi>t</mi><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msub><mo>=</mo><mn>7.37</mn><mi>d</mi>
-                <mspace width="1em" /><mi>V</mi><mo>/</mo><mi>F</mi><mo>=</mo><mn>12.2</mn><mi>L</mi>
-                <mspace width="1em" /><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.0286</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup>
-                <mspace width="1em" /><mi>CL</mi><mo>/</mo><mi>F</mi><mo>=</mo><mn>0.0478</mn><mi>L</mi><mo>/</mo><mi>h</mi>
-              </math>
-              <math className="math-display" display="block" aria-label="Tirzepatide half-life is 5.4 days, apparent volume is 10.3 liters, and absorption rate is 0.0373 per hour">
-                <mtext>Tirzepatide:</mtext><mspace width=".8em" /><msub><mi>t</mi><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msub><mo>=</mo><mn>5.4</mn><mi>d</mi>
-                <mspace width="1em" /><mi>V</mi><mo>/</mo><mi>F</mi><mo>=</mo><mn>10.3</mn><mi>L</mi>
-                <mspace width="1em" /><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.0373</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup>
-              </math>
+              <div className="math-parameter-group">
+                <strong>Semaglutide</strong>
+                <div className="math-pair-grid">
+                  <math className="math-display" display="block" aria-label="Semaglutide half-life is 7.37 days"><msub><mi>t</mi><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msub><mo>=</mo><mn>7.37</mn><mi>d</mi></math>
+                  <math className="math-display" display="block" aria-label="Semaglutide apparent volume is 12.2 liters"><mi>V</mi><mo>/</mo><mi>F</mi><mo>=</mo><mn>12.2</mn><mi>L</mi></math>
+                  <math className="math-display" display="block" aria-label="Semaglutide absorption rate is 0.0286 per hour"><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.0286</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math>
+                  <math className="math-display" display="block" aria-label="Semaglutide apparent clearance is 0.0478 liters per hour"><mi>CL</mi><mo>/</mo><mi>F</mi><mo>=</mo><mn>0.0478</mn><mi>L</mi><mo>/</mo><mi>h</mi></math>
+                </div>
+              </div>
+              <div className="math-parameter-group">
+                <strong>Tirzepatide</strong>
+                <div className="math-pair-grid">
+                  <math className="math-display" display="block" aria-label="Tirzepatide half-life is 5.4 days"><msub><mi>t</mi><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msub><mo>=</mo><mn>5.4</mn><mi>d</mi></math>
+                  <math className="math-display" display="block" aria-label="Tirzepatide apparent volume is 10.3 liters"><mi>V</mi><mo>/</mo><mi>F</mi><mo>=</mo><mn>10.3</mn><mi>L</mi></math>
+                  <math className="math-display" display="block" aria-label="Tirzepatide absorption rate is 0.0373 per hour"><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.0373</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math>
+                </div>
+              </div>
             </div>
             <small>The semaglutide values come from its published phase 3 population model. Tirzepatide uses its population half-life and apparent volume as a transparent reduced model; no overall personal-accuracy percentage is claimed.</small>
           </div>
           <div className="equation-card surrogate-card">
             <span>Retatrutide surrogate targets</span>
             <div className="math-scroll">
-              <math className="math-display" display="block" aria-label="Retatrutide half-life is approximately 6 days, apparent terminal volume is 7.36 liters, and absorption rate is 0.08 per hour">
-                <msub><mi>t</mi><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msub><mo>≈</mo><mn>6</mn><mi>d</mi>
-                <mspace width="1.2em" /><msub><mi>V</mi><mi>z</mi></msub><mo>/</mo><mi>F</mi><mo>=</mo><mn>7.36</mn><mi>L</mi>
-                <mspace width="1.2em" /><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.08</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup>
-              </math>
+              <div className="math-pair-grid math-three-up">
+                <math className="math-display" display="block" aria-label="Retatrutide half-life is approximately 6 days"><msub><mi>t</mi><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msub><mo>≈</mo><mn>6</mn><mi>d</mi></math>
+                <math className="math-display" display="block" aria-label="Retatrutide apparent terminal volume is 7.36 liters"><msub><mi>V</mi><mi>z</mi></msub><mo>/</mo><mi>F</mi><mo>=</mo><mn>7.36</mn><mi>L</mi></math>
+                <math className="math-display" display="block" aria-label="Retatrutide absorption rate is 0.08 per hour"><msub><mi>k</mi><mi>a</mi></msub><mo>=</mo><mn>0.08</mn><msup><mi>h</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math>
+              </div>
             </div>
             <small>The half-life and mean terminal apparent volume come from phase 1 cohorts. kₐ is fitted so the simplified curve reproduces the observed timing and exposure. Only one-compartment retatrutide plotting is available.</small>
           </div>
           <p className="model-distinction"><strong>How the compounded tab differs.</strong> Compounded semaglutide and tirzepatide run through the same respective model and published parameters as their branded counterparts. This produces a useful reference curve, but assumes brand-like pharmacokinetics that a compounded formulation may not reproduce. Retatrutide uses the one-compartment equation with the explicitly fitted surrogate parameters above.</p>
           <div className="equation-grid">
             <div><span>One-compartment elimination</span><math className="math-mini" display="block" aria-label="k e equals natural log of 2 divided by half-life in hours"><msub><mi>k</mi><mi>e</mi></msub><mo>=</mo><mfrac><mrow><mi>ln</mi><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow><msub><mi>t</mi><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msub></mfrac></math><p>All one-compartment curves derive elimination from the stated half-life after converting days to hours.</p></div>
-            <div><span>Modeled weight</span><math className="math-mini" display="block" aria-label="body weight at time t is the maximum of 30 kilograms and starting weight minus 0.45359237 kilograms times elapsed weeks"><mi>BW</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><mi>max</mi><mrow><mo>(</mo><mn>30</mn><mo>,</mo><msub><mi>BW</mi><mn>0</mn></msub><mo>−</mo><mn>0.45359237</mn><mfrac><mrow><mi>max</mi><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mi>t</mi><mo>−</mo><msub><mi>t</mi><mn>0</mn></msub><mo stretchy="false">)</mo></mrow><mn>168</mn></mfrac><mo>)</mo></mrow></math><p>Two-compartment mode assumes 1 lb/week loss after the first dose and floors weight at 30 kg.</p></div>
-            <div><span>Dose schedule</span><math className="math-mini" display="block" aria-label="dose time sub n equals the first active week offset plus time-of-day offset plus n times 24 times the interval days"><msub><mi>t</mi><mi>n</mi></msub><mo>=</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>from</mi></msub><mo>−</mo><mn>1</mn><mo>)</mo></mrow><mn>168</mn><mo>+</mo><mi>δ</mi><mo>+</mo><mi>n</mi><mo stretchy="false">(</mo><mn>24</mn><mi>I</mi><mo stretchy="false">)</mo></math><p>δ is 6, 12, or 18 hours for Morning, Afternoon, or Night. I is 7 days normally or the selected compounded interval; doses stop before 168 × “To week.”</p></div>
+            <div><span>Modeled weight</span><div className="math-mini-stack"><math className="math-mini" display="block" aria-label="W of t equals the maximum of zero and elapsed hours after the first dose divided by 168"><mi>W</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><mi>max</mi><mrow><mo>(</mo><mn>0</mn><mo>,</mo><mfrac><mrow><mi>t</mi><mo>−</mo><msub><mi>t</mi><mn>0</mn></msub></mrow><mn>168</mn></mfrac><mo>)</mo></mrow></math><math className="math-mini" display="block" aria-label="L of t equals 0.45359237 kilograms times W of t"><mi>L</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0.45359237</mn><mi>W</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></math><math className="math-mini" display="block" aria-label="body weight at time t is the maximum of 30 kilograms and starting weight minus L of t"><mi>BW</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><mi>max</mi><mrow><mo>(</mo><mn>30</mn><mo>,</mo><msub><mi>BW</mi><mn>0</mn></msub><mo>−</mo><mi>L</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>)</mo></mrow></math></div><p>Two-compartment mode assumes 1 lb/week loss after the first dose and floors weight at 30 kg.</p></div>
+            <div><span>Dose schedule</span><div className="math-mini-stack"><math className="math-mini" display="block" aria-label="base dose time equals the first active week offset plus the time-of-day offset"><msub><mi>t</mi><mi>base</mi></msub><mo>=</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>from</mi></msub><mo>−</mo><mn>1</mn><mo>)</mo></mrow><mn>168</mn><mo>+</mo><mi>δ</mi></math><math className="math-mini" display="block" aria-label="dose time sub n equals base dose time plus n times 24 times interval days"><msub><mi>t</mi><mi>n</mi></msub><mo>=</mo><msub><mi>t</mi><mi>base</mi></msub><mo>+</mo><mi>n</mi><mo stretchy="false">(</mo><mn>24</mn><mi>I</mi><mo stretchy="false">)</mo></math><math className="math-mini" display="block" aria-label="dose time sub n is less than 168 times the final active week"><msub><mi>t</mi><mi>n</mi></msub><mo>&lt;</mo><mn>168</mn><msub><mi>w</mi><mi>to</mi></msub></math></div><p>δ is 6, 12, or 18 hours for Morning, Afternoon, or Night. I is 7 days normally or the selected compounded interval; doses stop before 168 × “To week.”</p></div>
             <div><span>Repeated doses</span><math className="math-mini" display="block" aria-label="total concentration at time t equals the sum over all scheduled doses of dose concentration sub i at time t"><msub><mi>C</mi><mi>total</mi></msub><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>C</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></math><p>Every scheduled injection contributes its own curve; Accumulate adds all active regimen curves while Compare displays them separately.</p></div>
             <div><span>Unit conversion</span><math className="math-mini" display="block" aria-label="one milligram per liter equals one thousand nanograms per milliliter"><mfrac><mn>1 mg</mn><mn>1 L</mn></mfrac><mo>=</mo><mfrac><mn>1000 ng</mn><mn>1 mL</mn></mfrac></math><p>Dose is entered in mg, amount states use µg, volume is in L, and the chart reports ng/mL.</p></div>
-            <div><span>Area under curve</span><math className="math-mini" display="block" aria-label="AUC is approximated by the sum from j equals 1 to N of one half times concentration j plus concentration j minus 1 times delta t"><mi>AUC</mi><mo>≈</mo><munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mfrac><mrow><msub><mi>C</mi><mrow><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>C</mi><mi>j</mi></msub></mrow><mn>2</mn></mfrac><mi>Δt</mi></math><p>The displayed AUC uses the trapezoidal rule with Δt = 6 hours.</p></div>
+            <div><span>Area under curve</span><div className="math-mini-stack"><math className="math-mini" display="block" aria-label="T sub j equals the average of concentration j minus one and concentration j"><msub><mi>T</mi><mi>j</mi></msub><mo>=</mo><mfrac><mrow><msub><mi>C</mi><mrow><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>C</mi><mi>j</mi></msub></mrow><mn>2</mn></mfrac></math><math className="math-mini" display="block" aria-label="AUC is approximated by the sum from j equals 1 to N of T sub j times delta t"><mi>AUC</mi><mo>≈</mo><munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><msub><mi>T</mi><mi>j</mi></msub><mi>Δt</mi></math><math className="math-mini" display="block" aria-label="delta t equals six hours"><mi>Δt</mi><mo>=</mo><mn>6</mn><mi>h</mi></math></div><p>The displayed AUC uses the trapezoidal rule with six-hour samples.</p></div>
           </div>
           <ol className="process-list">
             <li><span>1</span><div><strong>Schedule doses</strong><p>The selected start date begins at midnight. Morning, Afternoon, and Night map internally to +6, +12, and +18 hours. Standard regimens repeat every 168 hours; a compounded custom interval repeats every X × 24 hours until the end of the selected final week.</p></div></li>
