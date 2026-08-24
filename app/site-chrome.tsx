@@ -16,6 +16,7 @@ export function SiteFooter() {
   return (
     <footer>
       <p>Educational visualization. Not medical advice.</p>
+      <p>Made by dev1niscool</p>
     </footer>
   );
 }

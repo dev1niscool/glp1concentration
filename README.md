@@ -10,10 +10,10 @@ The Methodology page documents the equation, exact parameters used by the code, 
 
 ## Model
 
-The calculator uses the published one-compartment structure for semaglutide, the published body-size-adjusted two-compartment structure for tirzepatide, and a fitted one-compartment surrogate for retatrutide. Each weekly dose contribution is superposed across the selected timeline. Every tab reports estimated plasma concentration in ng/mL, not a measured blood level or a personal dosing recommendation.
+The calculator defaults to one-compartment estimates for semaglutide and tirzepatide. An optional body-size-adjusted two-compartment mode uses the published rich-sampling models for both compounds and assumes 1 lb of weight loss per week after the first dose. Retatrutide remains one-compartment only. Each weekly dose contribution is superposed across the selected timeline, and every tab reports estimated plasma concentration in ng/mL rather than a measured blood level or personal dosing recommendation.
 
-- Semaglutide: approximately 7-day half-life, kₐ 0.0286 h⁻¹, apparent V/F 12.2 L.
-- Tirzepatide: two compartments with F 0.80, kₐ 0.0373 h⁻¹, CL 0.0329 L/h, Q 0.126 L/h, Vc 2.47 L, and Vp 3.98 L at the published 70 kg reference. Optional starting/current weight, height, and sex apply the paper’s body-size covariates; a clearly disclosed one-compartment privacy opt-out is also available.
+- Semaglutide: default one-compartment model with approximately 7-day half-life, kₐ 0.0286 h⁻¹, and apparent V/F 12.2 L; optional two-compartment model with F 0.847, kₐ 0.0253 h⁻¹, CL 0.0348 L/h, Q 0.304 L/h, Vc 3.59 L, and Vp 4.10 L at 85 kg.
+- Tirzepatide: default one-compartment reduction with a 5.4-day half-life and V/F 10.3 L; optional two-compartment model with F 0.80, kₐ 0.0373 h⁻¹, CL 0.0329 L/h, Q 0.126 L/h, Vc 2.47 L, and Vp 3.98 L at 70 kg.
 - Retatrutide: approximately 6-day half-life, fitted kₐ 0.08 h⁻¹, and cohort-mean apparent Vz/F 7.36 L from phase 1 PK.
 
 Sources are linked on the site and include FDA prescribing information plus population pharmacokinetic analyses for both compounds. Rybelsus is not included because daily oral semaglutide has different doses and absorption.
