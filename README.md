@@ -28,6 +28,10 @@ npm run test:pk
 
 `npm run build` validates the hosted Sites build. `GITHUB_PAGES=true npm run build:pages` creates the static `out` directory deployed by the included GitHub Pages workflow.
 
+## Analytics
+
+Cloudflare Web Analytics is supported through its privacy-first JavaScript beacon. Create a Web Analytics site for `dev1niscool.github.io`, then add its site token to the GitHub repository variable `CLOUDFLARE_WEB_ANALYTICS_TOKEN`; the Pages workflow includes it in every route on the next deployment. For local builds, copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN`. Leaving the value blank disables analytics.
+
 ## Disclaimer
 
 Educational use only. Not medical advice. Do not use the chart to start, stop, combine, or change medication.

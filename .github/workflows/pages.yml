@@ -30,6 +30,7 @@ jobs:
       - name: Build static site
         env:
           GITHUB_PAGES: 'true'
+          NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN: ${{ vars.CLOUDFLARE_WEB_ANALYTICS_TOKEN }}
         run: npm run build:pages
       - name: Configure Pages
         uses: actions/configure-pages@v5

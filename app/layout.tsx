@@ -30,6 +30,8 @@ export const metadata: Metadata = {
   },
 };
 
+const cloudflareAnalyticsToken = process.env.NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN?.trim();
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,6 +43,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        {cloudflareAnalyticsToken && (
+          <script
+            type="module"
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={JSON.stringify({ token: cloudflareAnalyticsToken })}
+          />
+        )}
       </body>
     </html>
   );
