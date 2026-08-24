@@ -6,6 +6,7 @@ import {
   doseConcentrationNgMl,
   modeledWeightAtHour,
   regimenConcentrationNgMl,
+  regimenDoseHours,
   sampleRegimen,
   semaglutideParametersForPatient,
   tirzepatideParametersForPatient,
@@ -126,6 +127,23 @@ test('dose time offsets delay the first contribution until the selected category
   assert.equal(regimenConcentrationNgMl(regimen, 18), 0);
   assert.ok(regimenConcentrationNgMl(regimen, 24) > 0);
   assert.deepEqual(DOSE_TIME_LABELS, { morning: 'Morning', afternoon: 'Afternoon', night: 'Night' });
+});
+
+test('custom compounded intervals schedule doses every selected number of days', () => {
+  const standard = {
+    id: 10,
+    compound: 'semaglutide',
+    doseMg: 0.5,
+    startWeek: 1,
+    endWeek: 4,
+    timeOfDay: 'morning',
+    useCustomDoseInterval: false,
+    doseIntervalDays: 5,
+  };
+  const custom = { ...standard, useCustomDoseInterval: true };
+  assert.deepEqual(regimenDoseHours(standard), [6, 174, 342, 510]);
+  assert.deepEqual(regimenDoseHours(custom), [6, 126, 246, 366, 486, 606]);
+  assert.ok(regimenConcentrationNgMl(custom, 130) > regimenConcentrationNgMl(standard, 130));
 });
 
 test('retatrutide surrogate reproduces phase 1 timing, Cmax, and AUC targets', () => {

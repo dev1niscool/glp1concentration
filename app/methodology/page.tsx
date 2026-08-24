@@ -84,7 +84,7 @@ export default function MethodologyPage() {
         </div>
         <div className="method-hero-note">
           <span>Model scope</span>
-          <strong>Weekly subcutaneous injection</strong>
+          <strong>Subcutaneous injection schedules</strong>
           <p>Population-average concentration estimate—not an individual prediction or measured blood level.</p>
           <Link href="/">Open the plotter <b aria-hidden="true">↗</b></Link>
         </div>
@@ -140,12 +140,12 @@ export default function MethodologyPage() {
           <p className="model-distinction"><strong>How the compounded tab differs.</strong> Compounded semaglutide and tirzepatide run through the same respective model and published parameters as their branded counterparts. This produces a useful reference curve, but assumes brand-like pharmacokinetics that a compounded formulation may not reproduce. Retatrutide uses the one-compartment equation with the explicitly fitted surrogate parameters above.</p>
           <div className="equation-grid">
             <div><span>One-compartment elimination</span><code>kₑ = ln(2) / t½</code><p>All one-compartment curves derive elimination from the stated half-life. Two-compartment curves derive α and β from CL, Q, Vc, and Vp.</p></div>
-            <div><span>Repeated doses</span><code>Ctotal(t) = Σ Cᵢ(t)</code><p>Every scheduled weekly injection contributes its own curve; the contributions are added.</p></div>
+            <div><span>Repeated doses</span><code>Ctotal(t) = Σ Cᵢ(t)</code><p>Every scheduled injection contributes its own curve; the contributions are added.</p></div>
             <div><span>Unit conversion</span><code>1 mg/L = 1000 ng/mL</code><p>Dose is entered in mg, volume in L, and the chart reports ng/mL.</p></div>
             <div><span>Area under curve</span><code>AUC ≈ Σ ½(Cⱼ + Cⱼ₋₁)Δt</code><p>The displayed AUC uses the trapezoidal rule over six-hour samples.</p></div>
           </div>
           <ol className="process-list">
-            <li><span>1</span><div><strong>Schedule doses</strong><p>The selected start date begins at midnight. Morning, Afternoon, and Night map internally to +6, +12, and +18 hours; later weekly doses remain exactly 168 hours apart.</p></div></li>
+            <li><span>1</span><div><strong>Schedule doses</strong><p>The selected start date begins at midnight. Morning, Afternoon, and Night map internally to +6, +12, and +18 hours. Standard regimens repeat every 168 hours; a compounded custom interval repeats every X × 24 hours until the end of the selected final week.</p></div></li>
             <li><span>2</span><div><strong>Apply the weight assumption</strong><p>In two-compartment mode, modeled weight begins at the entered first-dose weight and decreases continuously by 1 lb per week. To prevent impossible values on very long graphs, the calculation floors modeled weight at 30 kg (66 lb).</p></div></li>
             <li><span>3</span><div><strong>Sample the timeline</strong><p>The body-size-adjusted semaglutide and tirzepatide differential equations are integrated in one-hour Runge–Kutta steps. All graph curves and AUC values are retained at six-hour intervals through 1–520 weeks.</p></div></li>
             <li><span>4</span><div><strong>Accumulate or compare</strong><p>Accumulate sums the active regimen curves. Compare keeps them as separate lines. Different compounds are never treated as dose-equivalent.</p></div></li>
@@ -195,6 +195,7 @@ export default function MethodologyPage() {
             <article><span className="check-mark">✓</span><h3>Dose proportionality</h3><p>The equation is linear in dose: doubling a dose doubles every concentration and AUC value. That matches the dose-proportional exposure reported for semaglutide, tirzepatide, and retatrutide.</p></article>
             <article><span className="check-mark">✓</span><h3>Accumulation behavior</h3><p>Repeated weekly doses approach a plateau over roughly 4–5 half-lives. This matches labeled steady state at 4–5 weeks for semaglutide and 4 weeks for tirzepatide.</p></article>
             <article><span className="check-mark">✓</span><h3>Dose-time scheduling</h3><p>Automated checks confirm that a dose contributes zero before its selected Morning, Afternoon, or Night offset and begins contributing after that scheduled point.</p></article>
+            <article><span className="check-mark">✓</span><h3>Custom interval scheduling</h3><p>Automated checks confirm that compounded schedules repeat at the selected whole-day interval and stop before the week following the chosen “To week.”</p></article>
             <article><span className="check-mark">✓</span><h3>Retatrutide phase 1 fit</h3><p>At 1 mg, the surrogate predicts T<sub>max</sub> 37.4 hours, C<sub>max</sub> 113.5 ng/mL, and AUC 28,227 ng·h/mL. Phase 1 observations were 12–72 hours overall, 110 ng/mL, and 28,300 ng·h/mL.</p></article>
           </div>
           <div className="audit-strip"><span>Automated calculation checks</span><strong>two published semaglutide structures</strong><strong>body-size covariates</strong><strong>1 lb/week assumption</strong><strong>two-compartment AUC balance</strong></div>
@@ -214,7 +215,8 @@ export default function MethodologyPage() {
             <li><strong>Semaglutide covariates differ.</strong> The published semaglutide model retained body weight as the important covariate; sex and height are collected because they are required by tirzepatide’s fat-free-mass equation, not because they improve semaglutide parameters.</li>
             <li><strong>No model-accuracy percentage.</strong> The sources do not report one universal personal-accuracy score, so the site does not invent one.</li>
             <li><strong>Not dose equivalence.</strong> Adding semaglutide and tirzepatide concentrations is a mass visualization only and does not imply equal effect or safety.</li>
-            <li><strong>Not oral semaglutide.</strong> Rybelsus and Wegovy tablets use daily oral dosing with highly condition-dependent bioavailability, so they are outside this weekly injection model.</li>
+            <li><strong>Custom intervals are descriptive only.</strong> The compounded control models the schedule entered; it does not establish that the interval is appropriate or safe.</li>
+            <li><strong>Not oral semaglutide.</strong> Rybelsus and Wegovy tablets use daily oral dosing with highly condition-dependent bioavailability, so they are outside this injected-dose model.</li>
             <li><strong>Compounded products are not FDA approved.</strong> Their formulation, labeled concentration, absorption, quality, and bioavailability can differ. The compounded semaglutide and tirzepatide curves assume the published brand-name parameters and may not represent a particular vial.</li>
             <li><strong>Retatrutide is investigational.</strong> FDA states it cannot be used in compounding under federal law. Its curve is a simplified fit to phase 1 human PK, not an approved dosing model or support for use or sourcing.</li>
             <li><strong>Not treatment advice.</strong> Do not use the graph to start, stop, combine, or change medication. Ask a licensed clinician or pharmacist.</li>

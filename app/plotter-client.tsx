@@ -115,6 +115,8 @@ function defaultRegimens(variant: PlotterVariant): Regimen[] {
     startWeek: 1,
     endWeek: 4,
     timeOfDay: 'morning',
+    useCustomDoseInterval: false,
+    doseIntervalDays: 7,
   }];
 }
 
@@ -248,7 +250,7 @@ function EstimateChart({
       return {
         id: String(regimen.id),
         label: profile.name,
-        detail: `${regimen.doseMg} mg · weeks ${regimen.startWeek}–${regimen.endWeek} · ${DOSE_TIME_LABELS[regimen.timeOfDay]} · ${modelDetail(regimen.compound, pkModel)}`,
+        detail: `${regimen.doseMg} mg · weeks ${regimen.startWeek}–${regimen.endWeek} · ${DOSE_TIME_LABELS[regimen.timeOfDay]} · every ${regimen.useCustomDoseInterval ? regimen.doseIntervalDays : 7} days · ${modelDetail(regimen.compound, pkModel)}`,
         color,
         values: sampleRegimen(regimen, totalWeeks, STEP_HOURS, pkModel),
       };
@@ -461,6 +463,27 @@ function CompoundCard({
   const displayName = variant === 'compounded' && regimen.compound !== 'retatrutide'
     ? `Compounded ${profile.name}`
     : profile.name;
+  const [startWeekDraft, setStartWeekDraft] = useState<string | null>(null);
+  const [endWeekDraft, setEndWeekDraft] = useState<string | null>(null);
+  const [intervalDaysDraft, setIntervalDaysDraft] = useState<string | null>(null);
+
+  function applyStartWeek(rawValue: string) {
+    const startWeek = Math.max(1, Math.min(totalWeeks, Math.round(Number(rawValue)) || 1));
+    update({ startWeek, endWeek: Math.max(startWeek, regimen.endWeek) });
+  }
+
+  function applyEndWeek(rawValue: string) {
+    const endWeek = Math.max(
+      regimen.startWeek,
+      Math.min(totalWeeks, Math.round(Number(rawValue)) || regimen.startWeek),
+    );
+    update({ endWeek });
+  }
+
+  function applyIntervalDays(rawValue: string) {
+    const doseIntervalDays = Math.max(1, Math.min(365, Math.round(Number(rawValue)) || 7));
+    update({ doseIntervalDays });
+  }
 
   return (
     <fieldset className="dose-card">
@@ -496,7 +519,9 @@ function CompoundCard({
       <div className="compound-grid">
         <div className="dose-field">
           <label>
-            {variant === 'compounded' ? 'Weekly dose (mg)' : 'Weekly dose'}
+            {variant === 'compounded'
+              ? regimen.useCustomDoseInterval ? 'Dose per injection (mg)' : 'Weekly dose (mg)'
+              : 'Weekly dose'}
             {variant === 'branded' ? (
               <select value={regimen.doseMg} onChange={(event) => update({ doseMg: Number(event.target.value) })}>
                 {profile.doses.map((dose) => <option key={dose} value={dose}>{dose} mg</option>)}
@@ -511,7 +536,7 @@ function CompoundCard({
                   inputMode="decimal"
                   value={regimen.doseMg}
                   onChange={(event) => update({ doseMg: Math.max(0.001, Number(event.target.value) || 0.001) })}
-                  aria-label="Custom weekly dose in mg"
+                  aria-label={regimen.useCustomDoseInterval ? 'Custom dose per injection in mg' : 'Custom weekly dose in mg'}
                 />
                 <small>mg</small>
               </span>
@@ -521,7 +546,7 @@ function CompoundCard({
             <details className="dose-help">
               <summary>Need to calculate your dose?</summary>
               <div>
-                <p>Use this calculator to convert your vial concentration (mg/mL or mg/0.5 mL) and syringe units into an estimated weekly dose in milligrams.</p>
+                <p>Use this calculator to convert your vial concentration (mg/mL or mg/0.5 mL) and syringe units into an estimated dose per injection in milligrams.</p>
                 <a href="https://www.fatscientist.com/reverse-dosage-calculator" target="_blank" rel="noreferrer">Open the reverse dosage calculator <span aria-hidden="true">↗</span></a>
               </div>
             </details>
@@ -541,10 +566,15 @@ function CompoundCard({
             type="number"
             min="1"
             max={totalWeeks}
-            value={regimen.startWeek}
+            value={startWeekDraft ?? String(regimen.startWeek)}
             onChange={(event) => {
-              const startWeek = Math.max(1, Math.min(totalWeeks, Number(event.target.value) || 1));
-              update({ startWeek, endWeek: Math.max(startWeek, regimen.endWeek) });
+              const rawValue = event.target.value;
+              setStartWeekDraft(rawValue);
+              if (rawValue !== '') applyStartWeek(rawValue);
+            }}
+            onBlur={(event) => {
+              if (event.target.value !== '') applyStartWeek(event.target.value);
+              setStartWeekDraft(null);
             }}
           />
         </label>
@@ -554,11 +584,59 @@ function CompoundCard({
             type="number"
             min={regimen.startWeek}
             max={totalWeeks}
-            value={regimen.endWeek}
-            onChange={(event) => update({ endWeek: Math.max(regimen.startWeek, Math.min(totalWeeks, Number(event.target.value) || regimen.startWeek)) })}
+            value={endWeekDraft ?? String(regimen.endWeek)}
+            onChange={(event) => {
+              const rawValue = event.target.value;
+              setEndWeekDraft(rawValue);
+              if (rawValue !== '') applyEndWeek(rawValue);
+            }}
+            onBlur={(event) => {
+              if (event.target.value !== '') applyEndWeek(event.target.value);
+              setEndWeekDraft(null);
+            }}
           />
         </label>
       </div>
+      {variant === 'compounded' && (
+        <div className="custom-interval-control">
+          <label className="custom-interval-toggle">
+            <input
+              type="checkbox"
+              checked={regimen.useCustomDoseInterval}
+              onChange={(event) => update({
+                useCustomDoseInterval: event.target.checked,
+                doseIntervalDays: regimen.doseIntervalDays || 7,
+              })}
+            />
+            <span><strong>Use a custom injection interval</strong><small>Inject every X days instead of once every 7 days.</small></span>
+          </label>
+          {regimen.useCustomDoseInterval && (
+            <label className="interval-days-field">Inject once every
+              <span className="input-with-suffix">
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  step="1"
+                  inputMode="numeric"
+                  value={intervalDaysDraft ?? String(regimen.doseIntervalDays)}
+                  onChange={(event) => {
+                    const rawValue = event.target.value;
+                    setIntervalDaysDraft(rawValue);
+                    if (rawValue !== '') applyIntervalDays(rawValue);
+                  }}
+                  onBlur={(event) => {
+                    if (event.target.value !== '') applyIntervalDays(event.target.value);
+                    setIntervalDaysDraft(null);
+                  }}
+                  aria-label="Days between injections"
+                />
+                <small>days</small>
+              </span>
+            </label>
+          )}
+        </div>
+      )}
       <p className="pk-inline"><span /> {profile.halfLifeDays}-day half-life · {profile.id === 'retatrutide'
         ? 'one-compartment only'
         : modelMode === 'two-compartment'
@@ -697,7 +775,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
         <aside className="control-panel">
           <div className="panel-heading">
             <span>01</span>
-            <div><p>Build your regimen</p><small>Add weekly doses across your timeline</small></div>
+            <div><p>Build your regimen</p><small>{variant === 'compounded' ? 'Add doses across your timeline' : 'Add weekly doses across your timeline'}</small></div>
           </div>
 
           <div className="setup-grid">
@@ -781,6 +859,8 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
                 startWeek,
                 endWeek: Math.min(weeks, startWeek + 3),
                 timeOfDay: previous?.timeOfDay ?? 'morning',
+                useCustomDoseInterval: variant === 'compounded' ? first?.useCustomDoseInterval ?? false : false,
+                doseIntervalDays: variant === 'compounded' ? first?.doseIntervalDays ?? 7 : 7,
               }];
             })}
           ><span aria-hidden="true">+</span> Another compound</button>

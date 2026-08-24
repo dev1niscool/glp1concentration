@@ -89,6 +89,14 @@ input:hover, select:hover { border-color: #9aaa9e; }
 .dose-help > div { margin-top: 7px; padding: 9px; border: 1px solid #d5ddd4; border-radius: 9px; background: #f9fbf6; }
 .dose-help p { margin: 0; color: #6c786f; font-size: 9px; line-height: 1.5; }
 .dose-help a { display: inline-block; margin-top: 7px; color: #285b46; font-size: 9px; font-weight: 800; line-height: 1.4; }
+.custom-interval-control { margin-top: 12px; padding-top: 12px; border-top: 1px solid #d9e0d8; }
+.custom-interval-toggle { display: flex; grid-template-columns: none; align-items: flex-start; gap: 9px; margin: 0; cursor: pointer; letter-spacing: 0; text-transform: none; }
+.custom-interval-toggle input { width: 16px; height: 16px; flex: none; margin: 0; accent-color: var(--green); }
+.custom-interval-toggle > span { display: grid; gap: 3px; }
+.custom-interval-toggle strong { color: #405348; font-size: 9px; line-height: 1.35; }
+.custom-interval-toggle small { color: #7d887f; font-size: 8px; font-weight: 400; line-height: 1.4; }
+.interval-days-field { max-width: 165px; margin-top: 10px; }
+.interval-days-field .input-with-suffix input { padding-right: 42px; }
 .pk-inline { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; color: #748078; font-size: 10px; }
 .pk-inline span, .chart-note span { width: 6px; height: 6px; flex: none; border-radius: 50%; background: #91b855; }
 .model-choice { margin-top: 20px; }

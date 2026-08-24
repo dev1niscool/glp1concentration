@@ -10,6 +10,8 @@ export type Regimen = {
   startWeek: number;
   endWeek: number;
   timeOfDay: DoseTime;
+  useCustomDoseInterval: boolean;
+  doseIntervalDays: number;
 };
 
 type CompoundProfileBase = {
@@ -138,6 +140,25 @@ export const DOSE_TIME_LABELS: Record<DoseTime, string> = {
   afternoon: 'Afternoon',
   night: 'Night',
 };
+
+export function regimenIntervalDays(regimen: Regimen) {
+  if (!regimen.useCustomDoseInterval) return 7;
+  return Number.isFinite(regimen.doseIntervalDays) && regimen.doseIntervalDays >= 1
+    ? regimen.doseIntervalDays
+    : 7;
+}
+
+export function regimenDoseHours(regimen: Regimen) {
+  const firstDoseHour = (regimen.startWeek - 1) * HOURS_PER_WEEK +
+    DOSE_TIME_OFFSETS[regimen.timeOfDay];
+  const endExclusiveHour = regimen.endWeek * HOURS_PER_WEEK;
+  const intervalHours = regimenIntervalDays(regimen) * 24;
+  const doseHours: number[] = [];
+  for (let doseHour = firstDoseHour; doseHour < endExclusiveHour; doseHour += intervalHours) {
+    doseHours.push(doseHour);
+  }
+  return doseHours;
+}
 
 function oneCompartmentConcentration(
   doseMg: number,
@@ -285,8 +306,7 @@ export function regimenConcentrationNgMl(
   model: PkModelOptions = { kind: 'one-compartment' },
 ): number {
   let total = 0;
-  for (let week = regimen.startWeek; week <= regimen.endWeek; week += 1) {
-    const doseHour = (week - 1) * HOURS_PER_WEEK + DOSE_TIME_OFFSETS[regimen.timeOfDay];
+  for (const doseHour of regimenDoseHours(regimen)) {
     total += doseConcentrationNgMl(
       regimen.compound,
       regimen.doseMg,
@@ -316,11 +336,8 @@ function samplePersonalizedTwoCompartmentRegimen(
   const integrationStep = Math.min(1, stepHours);
   const integrationCount = Math.round(lastHour / integrationStep);
   const outputStride = Math.max(1, Math.round(stepHours / integrationStep));
-  const doseSteps = new Set<number>();
-  for (let week = regimen.startWeek; week <= regimen.endWeek; week += 1) {
-    const doseHour = (week - 1) * HOURS_PER_WEEK + DOSE_TIME_OFFSETS[regimen.timeOfDay];
-    doseSteps.add(Math.round(doseHour / integrationStep));
-  }
+  const doseSteps = new Set(regimenDoseHours(regimen).map((doseHour) =>
+    Math.round(doseHour / integrationStep)));
 
   const parametersAt = (timelineHour: number) => twoCompartmentParametersForPatient(
     regimen.compound,
