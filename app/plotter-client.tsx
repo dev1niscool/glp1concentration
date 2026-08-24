@@ -344,7 +344,7 @@ function CompoundCard({
             const label = variant === 'branded'
               ? `${item.name} · ${item.brands}`
               : compound === 'retatrutide'
-                ? 'Retatrutide · investigational; compounding prohibited'
+                ? 'Retatrutide · investigational'
                 : `Compounded ${item.name}`;
             return <option key={compound} value={compound}>{label}</option>;
           })}
@@ -352,22 +352,25 @@ function CompoundCard({
       </label>
       <div className="compound-grid">
         <label>
-          Weekly dose
+          {variant === 'compounded' ? 'Weekly dose (mg)' : 'Weekly dose'}
           {variant === 'branded' ? (
             <select value={regimen.doseMg} onChange={(event) => update({ doseMg: Number(event.target.value) })}>
               {profile.doses.map((dose) => <option key={dose} value={dose}>{dose} mg</option>)}
             </select>
           ) : (
-            <input
-              type="number"
-              min="0.001"
-              max="100"
-              step="0.001"
-              inputMode="decimal"
-              value={regimen.doseMg}
-              onChange={(event) => update({ doseMg: Math.max(0.001, Number(event.target.value) || 0.001) })}
-              aria-label="Custom weekly dose in milligrams"
-            />
+            <span className="input-with-suffix">
+              <input
+                type="number"
+                min="0.001"
+                max="100"
+                step="0.001"
+                inputMode="decimal"
+                value={regimen.doseMg}
+                onChange={(event) => update({ doseMg: Math.max(0.001, Number(event.target.value) || 0.001) })}
+                aria-label="Custom weekly dose in mg"
+              />
+              <small>mg</small>
+            </span>
           )}
         </label>
         <label>
@@ -475,9 +478,6 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
         <div>
           <p className="eyebrow">{variant === 'branded' ? 'GLP-1 concentration plotter' : 'Compounded & investigational simulator'}</p>
           <h1>{variant === 'branded' ? <>See how each weekly dose<br />builds in your system.</> : <>Explore custom doses<br />without false precision.</>}</h1>
-          <p className="lede">{variant === 'branded'
-            ? 'Explore a research-based estimate for injected semaglutide and tirzepatide—week by week, dose by dose.'
-            : 'Enter any dose for semaglutide, tirzepatide, or an educational retatrutide simulation. All three use smooth, research-based concentration curves.'}</p>
         </div>
         <div className="hero-stat" aria-label="Drug half-life reference">
           <span>Reference half-lives</span>
@@ -490,7 +490,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
       {variant === 'compounded' && (
         <aside className="compounded-alert" role="note">
           <strong>Important status distinction</strong>
-          <p>Compounded products are not FDA approved. Retatrutide is investigational, has not been found safe or effective, and FDA states it cannot be used in compounding under federal law. Its curve here is for pharmacokinetic education only.</p>
+          <p>Compounded products are not FDA approved. Retatrutide is investigational, and FDA states it cannot be used in compounding under federal law. Its curve here is for pharmacokinetic education only.</p>
           <a href="https://www.fda.gov/drugs/drug-alerts-and-statements/fdas-concerns-unapproved-glp-1-drugs-used-weight-loss" target="_blank" rel="noreferrer">Read the FDA notice <span aria-hidden="true">↗</span></a>
         </aside>
       )}

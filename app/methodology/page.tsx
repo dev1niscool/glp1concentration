@@ -3,14 +3,14 @@ import Link from 'next/link';
 import { SiteFooter, SiteHeader } from '../site-chrome';
 
 export const metadata: Metadata = {
-  title: 'Methodology — Half Life',
-  description: 'The equations, pharmacokinetic parameters, validation checks, sources, and limitations behind the Half Life branded and compounded GLP-1 plotters.',
+  title: 'Methodology — GLP-1 Concentration Plotter',
+  description: 'The equations, pharmacokinetic parameters, validation checks, sources, and limitations behind the branded and compounded GLP-1 plotters.',
   openGraph: {
-    title: 'Methodology — Half Life GLP-1 Plotter',
+    title: 'Methodology — GLP-1 Concentration Plotter',
     description: 'See exactly how the semaglutide and tirzepatide concentration curves are calculated and validated.',
   },
   twitter: {
-    title: 'Methodology — Half Life GLP-1 Plotter',
+    title: 'Methodology — GLP-1 Concentration Plotter',
     description: 'See exactly how the semaglutide and tirzepatide concentration curves are calculated and validated.',
   },
 };
@@ -175,7 +175,7 @@ export default function MethodologyPage() {
             <li><strong>Not dose equivalence.</strong> Adding semaglutide and tirzepatide concentrations is a mass visualization only and does not imply equal effect or safety.</li>
             <li><strong>Not oral semaglutide.</strong> Rybelsus and Wegovy tablets use daily oral dosing with highly condition-dependent bioavailability, so they are outside this weekly injection model.</li>
             <li><strong>Compounded products are not FDA approved.</strong> Their formulation, labeled concentration, absorption, quality, and bioavailability can differ. The compounded semaglutide and tirzepatide curves assume the published brand-name parameters and may not represent a particular vial.</li>
-            <li><strong>Retatrutide is investigational.</strong> FDA states it cannot be used in compounding under federal law and has not been found safe or effective. Its curve is a simplified fit to phase 1 human PK, not an approved dosing model or support for use or sourcing.</li>
+            <li><strong>Retatrutide is investigational.</strong> FDA states it cannot be used in compounding under federal law. Its curve is a simplified fit to phase 1 human PK, not an approved dosing model or support for use or sourcing.</li>
             <li><strong>Not treatment advice.</strong> Do not use the graph to start, stop, combine, or change medication. Ask a licensed clinician or pharmacist.</li>
           </ul>
         </div>

@@ -14,17 +14,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://dev1niscool.github.io/glp-1-plotter/'),
-  title: 'Half Life — GLP-1 Concentration Plotter',
+  title: 'GLP-1 Concentration Plotter',
   description: 'Plot modeled semaglutide and tirzepatide plasma concentration over time.',
   openGraph: {
-    title: 'Half Life — GLP-1 Concentration Plotter',
+    title: 'GLP-1 Concentration Plotter',
     description: 'Explore modeled weekly semaglutide and tirzepatide plasma concentration over time.',
     type: 'website',
-    images: [{ url: 'og.png', width: 1731, height: 909, alt: 'Half Life GLP-1 concentration plotter' }],
+    images: [{ url: 'og.png', width: 1731, height: 909, alt: 'GLP-1 concentration plotter' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Half Life — GLP-1 Concentration Plotter',
+    title: 'GLP-1 Concentration Plotter',
     description: 'Explore modeled weekly semaglutide and tirzepatide plasma concentration over time.',
     images: ['og.png'],
   },
