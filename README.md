@@ -1,4 +1,6 @@
-# Half Life — GLP-1 Concentration Plotter
+# GLP-1 Concentration Plotter
+
+[Open the live site](https://dev1niscool.github.io/glp1concentration/)
 
 An educational, browser-based pharmacokinetic visualization for once-weekly injected semaglutide and tirzepatide. Configure a start date, any whole-number graph duration, official dose steps, Morning/Afternoon/Night dose timing, and active weeks; then accumulate or compare modeled plasma concentration curves.
 

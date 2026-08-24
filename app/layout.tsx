@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://dev1niscool.github.io/glp-1-plotter/'),
+  metadataBase: new URL('https://dev1niscool.github.io/glp1concentration/'),
   title: 'GLP-1 Concentration Plotter',
   description: 'Plot modeled semaglutide and tirzepatide plasma concentration over time.',
   openGraph: {

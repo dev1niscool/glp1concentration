@@ -8,8 +8,8 @@ const nextConfig: NextConfig = {
     ? {
         output: 'export',
         trailingSlash: true,
-        basePath: '/glp-1-plotter',
-        assetPrefix: '/glp-1-plotter/',
+        basePath: '/glp1concentration',
+        assetPrefix: '/glp1concentration/',
       }
     : {}),
 };
