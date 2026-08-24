@@ -5,17 +5,32 @@ import {
   COMPOUNDS,
   CompoundId,
   DOSE_TIME_LABELS,
+  DOSE_TIME_OFFSETS,
   DoseTime,
   formatConcentration,
   niceScale,
   Regimen,
   sampleRegimen,
+  HOURS_PER_WEEK,
+  TirzepatideModelOptions,
+  TirzepatideModelSex,
   trapezoidAuc,
 } from './pk';
 import { SiteFooter, SiteHeader } from './site-chrome';
 
 type PlotMode = 'accumulate' | 'compare';
 type PlotterVariant = 'branded' | 'compounded';
+type MeasurementSystem = 'us' | 'metric';
+
+type TirzepatideProfileForm = {
+  useSimplifiedModel: boolean;
+  measurementSystem: MeasurementSystem;
+  startingWeight: string;
+  currentWeight: string;
+  sex: '' | TirzepatideModelSex;
+  heightPrimary: string;
+  heightSecondary: string;
+};
 
 type ChartSeries = {
   id: string;
@@ -30,10 +45,89 @@ const SERIES_COLORS = ['#174c38', '#a6cf27', '#a85e35', '#4d6da8', '#7f5b91'];
 const BRANDED_COMPOUNDS: CompoundId[] = ['semaglutide', 'tirzepatide'];
 const COMPOUNDED_COMPOUNDS: CompoundId[] = ['semaglutide', 'tirzepatide', 'retatrutide'];
 
+const DEFAULT_TIRZEPATIDE_PROFILE: TirzepatideProfileForm = {
+  useSimplifiedModel: false,
+  measurementSystem: 'us',
+  startingWeight: '',
+  currentWeight: '',
+  sex: '',
+  heightPrimary: '',
+  heightSecondary: '',
+};
+
 function todayInputValue() {
   const now = new Date();
   const offset = now.getTimezoneOffset() * 60_000;
   return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function parsePositiveNumber(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function currentWeightHourFromStartDate(startDate: string) {
+  if (!startDate) return 0;
+  const graphStart = new Date(`${startDate}T00:00:00`);
+  const today = new Date(`${todayInputValue()}T00:00:00`);
+  const hours = (today.getTime() - graphStart.getTime()) / 3_600_000;
+  return Number.isFinite(hours) ? hours : 0;
+}
+
+function tirzepatideModelFromForm(
+  form: TirzepatideProfileForm,
+  startDate: string,
+  firstDoseHour: number,
+): TirzepatideModelOptions | null {
+  if (form.useSimplifiedModel) return { kind: 'one-compartment' };
+  const startingInput = parsePositiveNumber(form.startingWeight);
+  const currentInput = form.currentWeight === '' ? null : parsePositiveNumber(form.currentWeight);
+  const heightPrimary = parsePositiveNumber(form.heightPrimary);
+  const heightSecondary = form.measurementSystem === 'us'
+    ? Number(form.heightSecondary || 0)
+    : 0;
+  if (
+    startingInput === null ||
+    (form.currentWeight !== '' && currentInput === null) ||
+    heightPrimary === null ||
+    form.sex === '' ||
+    !Number.isFinite(heightSecondary) ||
+    heightSecondary < 0 ||
+    heightSecondary >= 12
+  ) return null;
+
+  const startingWeightKg = form.measurementSystem === 'us'
+    ? startingInput * 0.45359237
+    : startingInput;
+  const currentWeightKg = currentInput === null
+    ? undefined
+    : form.measurementSystem === 'us'
+      ? currentInput * 0.45359237
+      : currentInput;
+  const heightCm = form.measurementSystem === 'us'
+    ? (heightPrimary * 12 + heightSecondary) * 2.54
+    : heightPrimary;
+  if (
+    startingWeightKg < 30 || startingWeightKg > 350 ||
+    (currentWeightKg !== undefined && (currentWeightKg < 30 || currentWeightKg > 350)) ||
+    heightCm < 120 || heightCm > 230
+  ) return null;
+
+  return {
+    kind: 'personalized-two-compartment',
+    startingWeightKg,
+    currentWeightKg,
+    heightCm,
+    sex: form.sex,
+    firstDoseHour,
+    currentWeightHour: currentWeightHourFromStartDate(startDate),
+  };
+}
+
+function tirzepatideModelDetail(model: TirzepatideModelOptions) {
+  if (model.kind === 'one-compartment') return 'simplified one-compartment estimate';
+  if (model.kind === 'personalized-two-compartment') return 'body-size-adjusted two-compartment estimate';
+  return '70 kg reference two-compartment estimate';
 }
 
 function defaultRegimens(variant: PlotterVariant): Regimen[] {
@@ -83,16 +177,99 @@ function maxOf(values: number[]) {
   return values.reduce((maximum, value) => Math.max(maximum, value), 0);
 }
 
+function TirzepatideProfilePanel({
+  form,
+  valid,
+  onChange,
+}: {
+  form: TirzepatideProfileForm;
+  valid: boolean;
+  onChange: (next: TirzepatideProfileForm) => void;
+}) {
+  const update = (partial: Partial<TirzepatideProfileForm>) => onChange({ ...form, ...partial });
+  const isUs = form.measurementSystem === 'us';
+  return (
+    <section className="tirzepatide-profile" aria-labelledby="tirzepatide-profile-title">
+      <div className="tirzepatide-profile-head">
+        <span>PK</span>
+        <div>
+          <strong id="tirzepatide-profile-title">Tirzepatide body-size model</strong>
+          <small>For the most accurate population-model estimate, provide these values.</small>
+        </div>
+      </div>
+
+      <div className="profile-unit-switch" role="group" aria-label="Measurement system">
+        <button type="button" className={isUs ? 'active' : ''} onClick={() => !isUs && update({ measurementSystem: 'us', startingWeight: '', currentWeight: '', heightPrimary: '', heightSecondary: '' })}>lb · ft/in</button>
+        <button type="button" className={!isUs ? 'active' : ''} onClick={() => isUs && update({ measurementSystem: 'metric', startingWeight: '', currentWeight: '', heightPrimary: '', heightSecondary: '' })}>kg · cm</button>
+      </div>
+
+      <fieldset disabled={form.useSimplifiedModel}>
+        <legend className="sr-only">Tirzepatide patient model inputs</legend>
+        <div className="profile-grid">
+          <label>Weight at first dose
+            <span className="input-with-suffix">
+              <input type="number" min={isUs ? 66 : 30} max={isUs ? 772 : 350} step="0.1" inputMode="decimal" placeholder={isUs ? 'e.g. 220' : 'e.g. 100'} value={form.startingWeight} onChange={(event) => update({ startingWeight: event.target.value })} />
+              <small>{isUs ? 'lb' : 'kg'}</small>
+            </span>
+          </label>
+          <label>Current weight <em>optional</em>
+            <span className="input-with-suffix">
+              <input type="number" min={isUs ? 66 : 30} max={isUs ? 772 : 350} step="0.1" inputMode="decimal" placeholder="If changed" value={form.currentWeight} onChange={(event) => update({ currentWeight: event.target.value })} />
+              <small>{isUs ? 'lb' : 'kg'}</small>
+            </span>
+          </label>
+          <label>Sex used in PK equation
+            <select value={form.sex} onChange={(event) => update({ sex: event.target.value as '' | TirzepatideModelSex })}>
+              <option value="">Select</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select>
+          </label>
+          {isUs ? (
+            <div className="height-field">
+              <label>Height
+                <span className="height-inputs">
+                  <span className="input-with-suffix"><input type="number" min="3" max="7" step="1" inputMode="numeric" placeholder="ft" aria-label="Height in feet" value={form.heightPrimary} onChange={(event) => update({ heightPrimary: event.target.value })} /><small>ft</small></span>
+                  <span className="input-with-suffix"><input type="number" min="0" max="11" step="0.1" inputMode="decimal" placeholder="in" aria-label="Additional height in inches" value={form.heightSecondary} onChange={(event) => update({ heightSecondary: event.target.value })} /><small>in</small></span>
+                </span>
+              </label>
+            </div>
+          ) : (
+            <label>Height
+              <span className="input-with-suffix">
+                <input type="number" min="120" max="230" step="0.1" inputMode="decimal" placeholder="e.g. 175" value={form.heightPrimary} onChange={(event) => update({ heightPrimary: event.target.value })} />
+                <small>cm</small>
+              </span>
+            </label>
+          )}
+        </div>
+        <p className="profile-privacy">Used only in your browser for this graph. These values are not saved or uploaded.</p>
+      </fieldset>
+
+      <label className="simplified-optout">
+        <input type="checkbox" checked={form.useSimplifiedModel} onChange={(event) => update({ useSimplifiedModel: event.target.checked })} />
+        <span>
+          <strong>Use a one-compartment estimate instead</strong>
+          <small>Check this if you would rather not enter body-size information. No scientifically valid overall accuracy percentage has been published. At the 70 kg reference, this reduction estimates the 5 mg peak about 32% lower and about 31 hours later than the published two-compartment model.</small>
+        </span>
+      </label>
+      {!form.useSimplifiedModel && !valid && <p className="profile-required" role="status">Complete weight at first dose, sex, and height before plotting tirzepatide.</p>}
+    </section>
+  );
+}
+
 function EstimateChart({
   regimens,
   mode,
   totalWeeks,
   startDate,
+  tirzepatideModel,
 }: {
   regimens: Regimen[];
   mode: PlotMode;
   totalWeeks: number;
   startDate: string;
+  tirzepatideModel: TirzepatideModelOptions;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -107,12 +284,12 @@ function EstimateChart({
       return {
         id: String(regimen.id),
         label: profile.name,
-        detail: `${regimen.doseMg} mg · weeks ${regimen.startWeek}–${regimen.endWeek} · ${DOSE_TIME_LABELS[regimen.timeOfDay]}`,
+        detail: `${regimen.doseMg} mg · weeks ${regimen.startWeek}–${regimen.endWeek} · ${DOSE_TIME_LABELS[regimen.timeOfDay]}${regimen.compound === 'tirzepatide' ? ` · ${tirzepatideModelDetail(tirzepatideModel)}` : ''}`,
         color,
-        values: sampleRegimen(regimen, totalWeeks, STEP_HOURS),
+        values: sampleRegimen(regimen, totalWeeks, STEP_HOURS, tirzepatideModel),
       };
     }),
-    [regimens, totalWeeks],
+    [regimens, tirzepatideModel, totalWeeks],
   );
 
   const displaySeries = useMemo<ChartSeries[]>(() => {
@@ -301,6 +478,7 @@ function CompoundCard({
   totalWeeks,
   removable,
   variant,
+  tirzepatideSimplified,
   onChange,
   onRemove,
 }: {
@@ -309,6 +487,7 @@ function CompoundCard({
   totalWeeks: number;
   removable: boolean;
   variant: PlotterVariant;
+  tirzepatideSimplified: boolean;
   onChange: (next: Regimen) => void;
   onRemove: () => void;
 }) {
@@ -416,7 +595,9 @@ function CompoundCard({
           />
         </label>
       </div>
-      <p className="pk-inline"><span /> {profile.halfLifeDays}-day half-life · {profile.model === 'two-compartment' ? 'two-compartment' : 'one-compartment'} weekly model</p>
+      <p className="pk-inline"><span /> {profile.halfLifeDays}-day half-life · {profile.id === 'tirzepatide'
+        ? tirzepatideSimplified ? 'one-compartment opt-out model' : 'body-size-adjusted two-compartment model'
+        : 'one-compartment weekly model'}</p>
     </fieldset>
   );
 }
@@ -428,13 +609,30 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const [plottedRegimens, setPlottedRegimens] = useState<Regimen[]>(() => defaultRegimens(variant));
   const [mode, setMode] = useState<PlotMode>('accumulate');
   const [plotPulse, setPlotPulse] = useState(false);
+  const [tirzepatideProfile, setTirzepatideProfile] = useState<TirzepatideProfileForm>(DEFAULT_TIRZEPATIDE_PROFILE);
+  const [plottedTirzepatideModel, setPlottedTirzepatideModel] = useState<TirzepatideModelOptions>({ kind: 'reference-two-compartment' });
   const totalWeeks = durationInput === '' ? null : Number(durationInput);
+  const hasDraftTirzepatide = draftRegimens.some((regimen) => regimen.compound === 'tirzepatide');
+  const firstDraftTirzepatideDoseHourValue = draftRegimens
+    .filter((regimen) => regimen.compound === 'tirzepatide')
+    .reduce((earliest, regimen) => Math.min(
+      earliest,
+      (regimen.startWeek - 1) * HOURS_PER_WEEK + DOSE_TIME_OFFSETS[regimen.timeOfDay],
+    ), Number.POSITIVE_INFINITY);
+  const firstDraftTirzepatideDoseHour = Number.isFinite(firstDraftTirzepatideDoseHourValue)
+    ? firstDraftTirzepatideDoseHourValue
+    : 0;
+  const draftTirzepatideModel = useMemo(
+    () => tirzepatideModelFromForm(tirzepatideProfile, startDate, firstDraftTirzepatideDoseHour),
+    [firstDraftTirzepatideDoseHour, startDate, tirzepatideProfile],
+  );
+  const tirzepatideProfileValid = draftTirzepatideModel !== null;
 
   const samples = useMemo(
     () => totalWeeks === null
       ? []
-      : plottedRegimens.map((regimen) => sampleRegimen(regimen, totalWeeks, STEP_HOURS)),
-    [plottedRegimens, totalWeeks],
+      : plottedRegimens.map((regimen) => sampleRegimen(regimen, totalWeeks, STEP_HOURS, plottedTirzepatideModel)),
+    [plottedRegimens, plottedTirzepatideModel, totalWeeks],
   );
   const combined = useMemo(
     () => samples[0]?.map((_, index) => samples.reduce((sum, values) => sum + values[index], 0)) ?? [0],
@@ -475,9 +673,18 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
     setPlottedRegimens((current) => current.map(clamp));
   }
 
+  function updateStartDate(nextStartDate: string) {
+    setStartDate(nextStartDate);
+    setPlottedTirzepatideModel((current) => current.kind === 'personalized-two-compartment'
+      ? { ...current, currentWeightHour: currentWeightHourFromStartDate(nextStartDate) }
+      : current);
+  }
+
   function plot() {
-    if (totalWeeks === null) return;
+    if (totalWeeks === null || !startDate) return;
+    if (hasDraftTirzepatide && draftTirzepatideModel === null) return;
     setPlottedRegimens(draftRegimens.map((regimen) => ({ ...regimen })));
+    if (draftTirzepatideModel !== null) setPlottedTirzepatideModel(draftTirzepatideModel);
     setPlotPulse(true);
     window.setTimeout(() => setPlotPulse(false), 520);
   }
@@ -489,6 +696,8 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
     setDraftRegimens(defaults);
     setPlottedRegimens(defaults);
     setMode('accumulate');
+    setTirzepatideProfile(DEFAULT_TIRZEPATIDE_PROFILE);
+    setPlottedTirzepatideModel({ kind: 'reference-two-compartment' });
   }
 
   return (
@@ -524,7 +733,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
           </div>
 
           <div className="setup-grid">
-            <label>Start date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
+            <label>Start date<input type="date" required value={startDate} onChange={(event) => updateStartDate(event.target.value)} /></label>
             <label>Graph duration
               <span className="input-with-suffix">
                 <input
@@ -559,11 +768,20 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
                 totalWeeks={totalWeeks ?? 520}
                 removable={draftRegimens.length > 1}
                 variant={variant}
+                tirzepatideSimplified={tirzepatideProfile.useSimplifiedModel}
                 onChange={(next) => updateRegimen(index, next)}
                 onRemove={() => setDraftRegimens((current) => current.filter((item) => item.id !== regimen.id))}
               />
             ))}
           </div>
+
+          {hasDraftTirzepatide && (
+            <TirzepatideProfilePanel
+              form={tirzepatideProfile}
+              valid={tirzepatideProfileValid}
+              onChange={setTirzepatideProfile}
+            />
+          )}
 
           <button
             className="add-button"
@@ -589,7 +807,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
           ><span aria-hidden="true">+</span> Another compound</button>
 
           <div className="button-row">
-            <button className="primary" type="button" disabled={totalWeeks === null} onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
+            <button className="primary" type="button" disabled={!startDate || totalWeeks === null || (hasDraftTirzepatide && !tirzepatideProfileValid)} onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
             <button className="reset-button" type="button" onClick={reset}>Reset</button>
           </div>
         </aside>
@@ -607,7 +825,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             </div>
           ) : (
             <>
-              <EstimateChart regimens={plottedRegimens} mode={mode} totalWeeks={totalWeeks} startDate={startDate} />
+              <EstimateChart regimens={plottedRegimens} mode={mode} totalWeeks={totalWeeks} startDate={startDate} tirzepatideModel={plottedTirzepatideModel} />
               <p className="chart-note"><span /> Hover or tap the curve for an estimate and time-of-day category.</p>
               {mode === 'accumulate' && plottedRegimens.length > 1 && <p className="sum-note">The combined line sums modeled mass concentrations for visual context only; it does not imply dose, safety, or effect equivalence.</p>}
 

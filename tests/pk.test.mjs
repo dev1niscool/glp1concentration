@@ -6,6 +6,8 @@ import {
   doseConcentrationNgMl,
   regimenConcentrationNgMl,
   sampleRegimen,
+  tirzepatideParametersForPatient,
+  tirzepatideWeightAtHour,
   trapezoidAuc,
 } from '../app/pk.ts';
 
@@ -53,6 +55,49 @@ test('tirzepatide uses the published two-compartment fixed effects and exposure'
   const modeledAuc = trapezoidAuc(singleDose, 0.25);
   const massBalanceAuc = profile.bioavailability * 5 * 1000 / profile.clearanceLitersPerHour;
   assert.ok(Math.abs(modeledAuc / massBalanceAuc - 1) < 0.002, `AUC was ${modeledAuc}, expected ${massBalanceAuc}`);
+});
+
+test('tirzepatide patient model applies published body-size covariates over time', () => {
+  const parameters = tirzepatideParametersForPatient(100, 175, 'male');
+  assert.ok(Math.abs(parameters.clearanceLitersPerHour - 0.043764046) < 1e-8);
+  assert.ok(Math.abs(parameters.intercompartmentalClearanceLitersPerHour - 0.167606985) < 1e-8);
+  assert.ok(Math.abs(parameters.centralVolumeLiters - 2.934560875) < 1e-8);
+  assert.ok(Math.abs(parameters.peripheralVolumeLiters - 4.728563676) < 1e-8);
+
+  const model = {
+    kind: 'personalized-two-compartment',
+    startingWeightKg: 100,
+    currentWeightKg: 80,
+    heightCm: 175,
+    sex: 'male',
+    firstDoseHour: 0,
+    currentWeightHour: 8 * 168,
+  };
+  assert.equal(tirzepatideWeightAtHour(model, 0), 100);
+  assert.equal(tirzepatideWeightAtHour(model, 4 * 168), 90);
+  assert.equal(tirzepatideWeightAtHour(model, 8 * 168), 80);
+  assert.equal(tirzepatideWeightAtHour(model, 12 * 168), 80);
+
+  const values = sampleRegimen({ id: 4, compound: 'tirzepatide', doseMg: 5, startWeek: 1, endWeek: 8, timeOfDay: 'morning' }, 12, 6, model);
+  assert.equal(values.length, 337);
+  assert.ok(values.every(Number.isFinite));
+  assert.ok(Math.max(...values) > 0);
+
+  const constantModel = { ...model, currentWeightKg: undefined, currentWeightHour: 0 };
+  const singleDose = sampleRegimen({ id: 5, compound: 'tirzepatide', doseMg: 5, startWeek: 1, endWeek: 1, timeOfDay: 'morning' }, 12, 0.25, constantModel);
+  const expectedAuc = 0.8 * 5 * 1000 / parameters.clearanceLitersPerHour;
+  assert.ok(Math.abs(trapezoidAuc(singleDose, 0.25) / expectedAuc - 1) < 0.002);
+});
+
+test('tirzepatide privacy opt-out uses the documented one-compartment reduction', () => {
+  const model = { kind: 'one-compartment' };
+  let peak = { hour: 0, concentration: 0 };
+  for (let hour = 0; hour <= 168; hour += 0.05) {
+    const concentration = doseConcentrationNgMl('tirzepatide', 5, hour, model);
+    if (concentration > peak.concentration) peak = { hour, concentration };
+  }
+  assert.ok(peak.hour >= 60.7 && peak.hour <= 60.9, `peak was ${peak.hour} hours`);
+  assert.ok(peak.concentration >= 350 && peak.concentration <= 351, `peak was ${peak.concentration} ng/mL`);
 });
 
 test('dose time offsets delay the first contribution until the selected category', () => {
