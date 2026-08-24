@@ -2,9 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   COMPOUNDS,
-  doseAmountRemainingMg,
+  DOSE_TIME_LABELS,
   doseConcentrationNgMl,
-  regimenAmountRemainingMg,
   regimenConcentrationNgMl,
   sampleRegimen,
   trapezoidAuc,
@@ -45,11 +44,17 @@ test('dose time offsets delay the first contribution until the selected category
   assert.equal(regimenConcentrationNgMl(regimen, 17.99), 0);
   assert.equal(regimenConcentrationNgMl(regimen, 18), 0);
   assert.ok(regimenConcentrationNgMl(regimen, 24) > 0);
+  assert.deepEqual(DOSE_TIME_LABELS, { morning: 'Morning', afternoon: 'Afternoon', night: 'Night' });
 });
 
-test('amount-remaining model reaches exactly half the dose after one half-life', () => {
-  assert.equal(doseAmountRemainingMg(8, 6, 6 * 24), 4);
-  const regimen = { id: 1, compound: 'retatrutide', doseMg: 8, startWeek: 1, endWeek: 1, timeOfDay: 'morning' };
-  assert.equal(regimenAmountRemainingMg(regimen, 6 + 6 * 24), 4);
-  assert.equal(sampleRegimen(regimen, 1, 6, 'amount')[0], 0);
+test('retatrutide surrogate reproduces phase 1 timing, Cmax, and AUC targets', () => {
+  const profile = COMPOUNDS.retatrutide;
+  const ke = Math.log(2) / (profile.halfLifeDays * 24);
+  const tMaxHours = Math.log(profile.absorptionRatePerHour / ke) / (profile.absorptionRatePerHour - ke);
+  const cMax = doseConcentrationNgMl('retatrutide', 1, tMaxHours);
+  const auc = 1000 / (profile.apparentVolumeLiters * ke);
+
+  assert.ok(tMaxHours >= 12 && tMaxHours <= 72, `peak was ${tMaxHours} hours`);
+  assert.ok(Math.abs(cMax - 110) / 110 < 0.05, `expected about 110 ng/mL, got ${cMax}`);
+  assert.ok(Math.abs(auc - 28_300) / 28_300 < 0.01, `expected about 28,300 ng·h/mL, got ${auc}`);
 });

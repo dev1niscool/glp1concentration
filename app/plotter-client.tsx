@@ -7,7 +7,6 @@ import {
   DOSE_TIME_LABELS,
   DoseTime,
   formatConcentration,
-  ModelOutput,
   niceScale,
   Regimen,
   sampleRegimen,
@@ -64,8 +63,6 @@ function longDate(date: Date) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
   }).format(date);
 }
 
@@ -91,19 +88,17 @@ function EstimateChart({
   mode,
   totalWeeks,
   startDate,
-  output,
 }: {
   regimens: Regimen[];
   mode: PlotMode;
   totalWeeks: number;
   startDate: string;
-  output: ModelOutput;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 760, height: 420 });
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const unit = output === 'concentration' ? 'ng/mL' : 'mg';
+  const unit = 'ng/mL';
 
   const individualSeries = useMemo<ChartSeries[]>(
     () => regimens.map((regimen, index) => {
@@ -114,10 +109,10 @@ function EstimateChart({
         label: profile.name,
         detail: `${regimen.doseMg} mg · weeks ${regimen.startWeek}–${regimen.endWeek} · ${DOSE_TIME_LABELS[regimen.timeOfDay]}`,
         color,
-        values: sampleRegimen(regimen, totalWeeks, STEP_HOURS, output),
+        values: sampleRegimen(regimen, totalWeeks, STEP_HOURS),
       };
     }),
-    [output, regimens, totalWeeks],
+    [regimens, totalWeeks],
   );
 
   const displaySeries = useMemo<ChartSeries[]>(() => {
@@ -262,7 +257,7 @@ function EstimateChart({
         <canvas
           ref={canvasRef}
           className="plot-canvas"
-          aria-label={`Estimated ${output === 'concentration' ? 'plasma concentration' : 'dose-equivalent amount remaining'} chart from ${shortDate(dateAtHour(startDate, 0))} for ${totalWeeks} weeks. Use left and right arrow keys to inspect values.`}
+          aria-label={`Estimated plasma concentration chart from ${shortDate(dateAtHour(startDate, 0))} for ${totalWeeks} weeks. Use left and right arrow keys to inspect values.`}
           tabIndex={0}
           onPointerMove={setHoverFromPointer}
           onPointerDown={setHoverFromPointer}
@@ -378,9 +373,9 @@ function CompoundCard({
         <label>
           Dose time
           <select value={regimen.timeOfDay} onChange={(event) => update({ timeOfDay: event.target.value as DoseTime })}>
-            <option value="morning">Morning · 6 AM</option>
-            <option value="afternoon">Afternoon · noon</option>
-            <option value="night">Night · 6 PM</option>
+            <option value="morning">Morning</option>
+            <option value="afternoon">Afternoon</option>
+            <option value="night">Night</option>
           </select>
         </label>
         <label>
@@ -413,7 +408,6 @@ function CompoundCard({
 }
 
 export function PlotterClient({ variant }: { variant: PlotterVariant }) {
-  const output: ModelOutput = variant === 'branded' ? 'concentration' : 'amount';
   const [startDate, setStartDate] = useState(todayInputValue);
   const [totalWeeks, setTotalWeeks] = useState(16);
   const [draftRegimens, setDraftRegimens] = useState<Regimen[]>(() => defaultRegimens(variant));
@@ -422,8 +416,8 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const [plotPulse, setPlotPulse] = useState(false);
 
   const samples = useMemo(
-    () => plottedRegimens.map((regimen) => sampleRegimen(regimen, totalWeeks, STEP_HOURS, output)),
-    [output, plottedRegimens, totalWeeks],
+    () => plottedRegimens.map((regimen) => sampleRegimen(regimen, totalWeeks, STEP_HOURS)),
+    [plottedRegimens, totalWeeks],
   );
   const combined = useMemo(
     () => samples[0]?.map((_, index) => samples.reduce((sum, values) => sum + values[index], 0)) ?? [0],
@@ -441,7 +435,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const auc = mode === 'accumulate'
     ? trapezoidAuc(combined, STEP_HOURS)
     : samples.reduce((sum, values) => sum + trapezoidAuc(values, STEP_HOURS), 0);
-  const unit = output === 'concentration' ? 'ng/mL' : 'mg';
+  const unit = 'ng/mL';
 
   function updateRegimen(index: number, next: Regimen) {
     setDraftRegimens((current) => current.map((regimen, regimenIndex) => regimenIndex === index ? next : regimen));
@@ -483,7 +477,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
           <h1>{variant === 'branded' ? <>See how each weekly dose<br />builds in your system.</> : <>Explore custom doses<br />without false precision.</>}</h1>
           <p className="lede">{variant === 'branded'
             ? 'Explore a research-based estimate for injected semaglutide and tirzepatide—week by week, dose by dose.'
-            : 'Enter any dose for semaglutide, tirzepatide, or an educational retatrutide simulation. This view estimates dose-equivalent amount remaining, not a measured blood level.'}</p>
+            : 'Enter any dose for semaglutide, tirzepatide, or an educational retatrutide simulation. All three use smooth, research-based concentration curves.'}</p>
         </div>
         <div className="hero-stat" aria-label="Drug half-life reference">
           <span>Reference half-lives</span>
@@ -496,7 +490,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
       {variant === 'compounded' && (
         <aside className="compounded-alert" role="note">
           <strong>Important status distinction</strong>
-          <p>Compounded products are not FDA approved. Retatrutide is investigational, has not been found safe or effective, and FDA states it cannot be used in compounding under federal law. Its option here is for half-life education only.</p>
+          <p>Compounded products are not FDA approved. Retatrutide is investigational, has not been found safe or effective, and FDA states it cannot be used in compounding under federal law. Its curve here is for pharmacokinetic education only.</p>
           <a href="https://www.fda.gov/drugs/drug-alerts-and-statements/fdas-concerns-unapproved-glp-1-drugs-used-weight-loss" target="_blank" rel="noreferrer">Read the FDA notice <span aria-hidden="true">↗</span></a>
         </aside>
       )}
@@ -563,25 +557,31 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
           ><span aria-hidden="true">+</span> Another compound</button>
 
           <div className="button-row">
-            <button className="primary" type="button" onClick={plot}>Plot {variant === 'branded' ? 'concentration' : 'estimate'} <span aria-hidden="true">↗</span></button>
+            <button className="primary" type="button" onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
             <button className="reset-button" type="button" onClick={reset}>Reset</button>
           </div>
         </aside>
 
         <div className="chart-panel">
           <div className="chart-head">
-            <div><p>{variant === 'branded' ? 'Estimated concentration' : 'Half-life-only estimate'}</p><h2>{variant === 'branded' ? 'Plasma level over time' : 'Dose-equivalent amount remaining'}</h2></div>
-            <span className="unit-chip">{variant === 'branded' ? 'ng / mL' : 'mg'}</span>
+            <div><p>Estimated concentration</p><h2>Plasma level over time</h2></div>
+            <span className="unit-chip">ng / mL</span>
           </div>
-          <EstimateChart regimens={plottedRegimens} mode={mode} totalWeeks={totalWeeks} startDate={startDate} output={output} />
+          <EstimateChart regimens={plottedRegimens} mode={mode} totalWeeks={totalWeeks} startDate={startDate} />
           <p className="chart-note"><span /> Hover or tap the curve for an estimate and time-of-day category.</p>
-          {mode === 'accumulate' && plottedRegimens.length > 1 && <p className="sum-note">The combined line sums {variant === 'branded' ? 'modeled mass concentrations' : 'estimated residual masses'} for visual context only; it does not imply dose, safety, or effect equivalence.</p>}
+          {mode === 'accumulate' && plottedRegimens.length > 1 && <p className="sum-note">The combined line sums modeled mass concentrations for visual context only; it does not imply dose, safety, or effect equivalence.</p>}
 
           <div className="metric-grid">
             <div><span>Modeled peak</span><strong>{formatConcentration(peak)} <small>{unit}</small></strong><p>{longDate(dateAtHour(startDate, peakIndex * STEP_HOURS))}</p></div>
-            <div><span>Timeline AUC</span><strong>{Math.round(auc).toLocaleString()} <small>{output === 'concentration' ? 'ng·h/mL' : 'mg·h'}</small></strong><p>Area under the displayed curve</p></div>
+            <div><span>Timeline AUC</span><strong>{Math.round(auc).toLocaleString()} <small>ng·h/mL</small></strong><p>Area under the displayed curve</p></div>
             <div><span>At graph end</span><strong>{formatConcentration(endValue)} <small>{unit}</small></strong><p>After {totalWeeks} plotted {totalWeeks === 1 ? 'week' : 'weeks'}</p></div>
           </div>
+          {variant === 'compounded' && (
+            <aside className="compounded-disclaimer" role="note">
+              <strong>How to read this estimate</strong>
+              <p>Compounded semaglutide and tirzepatide reuse the published brand-name pharmacokinetic parameters. A compounded formulation may differ in concentration, absorption, bioavailability, purity, and handling, so the real curve may not match this estimate. Retatrutide uses a transparent one-compartment surrogate fitted to published phase 1 human PK data; it is investigational and not an approved compounded drug.</p>
+            </aside>
+          )}
         </div>
       </section>
 

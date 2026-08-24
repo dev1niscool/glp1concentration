@@ -2,17 +2,17 @@
 
 An educational, browser-based pharmacokinetic visualization for once-weekly injected semaglutide and tirzepatide. Configure a start date, any whole-number graph duration, official dose steps, Morning/Afternoon/Night dose timing, and active weeks; then accumulate or compare modeled plasma concentration curves.
 
-The separate Compounded tab accepts custom doses for semaglutide and tirzepatide and includes a clearly labeled educational retatrutide simulation. Because formulation-specific bioavailability and apparent volume cannot be assumed, it reports estimated dose-equivalent amount remaining in mg—not plasma concentration. Retatrutide is investigational, and FDA states it cannot be used in compounding under federal law.
+The separate Compounded tab accepts custom doses for semaglutide and tirzepatide and includes a clearly labeled educational retatrutide simulation. Compounded semaglutide and tirzepatide reuse the branded population-PK parameters as an estimate. Retatrutide uses a one-compartment surrogate fitted to published phase 1 human PK. Retatrutide is investigational, and FDA states it cannot be used in compounding under federal law.
 
-The Methodology page documents both equations, exact parameters used by the code, dose-time offsets, validation checks, primary sources, and limitations.
+The Methodology page documents the equation, exact parameters used by the code, dose-time offsets, validation checks, primary sources, and limitations.
 
 ## Model
 
-The branded calculator uses a one-compartment model with first-order subcutaneous absorption and elimination. Each weekly dose contribution is superposed across the selected timeline. The output is an estimated plasma concentration in ng/mL, not a measured blood level or a personal dosing recommendation. The compounded view uses half-life-only exponential decay and reports mg remaining.
+The calculator uses a one-compartment model with first-order subcutaneous absorption and elimination. Each weekly dose contribution is superposed across the selected timeline. Every tab reports estimated plasma concentration in ng/mL, not a measured blood level or a personal dosing recommendation.
 
 - Semaglutide: approximately 7-day half-life, kₐ 0.0286 h⁻¹, apparent V/F 12.2 L.
 - Tirzepatide: approximately 5-day half-life, kₐ 0.0373 h⁻¹, apparent V/F 10.3 L.
-- Retatrutide: approximately 6-day phase 2 half-life, used only by the amount-remaining simulator.
+- Retatrutide: approximately 6-day half-life, fitted kₐ 0.08 h⁻¹, and cohort-mean apparent Vz/F 7.36 L from phase 1 PK.
 
 Sources are linked on the site and include FDA prescribing information plus population pharmacokinetic analyses for both compounds. Rybelsus is not included because daily oral semaglutide has different doses and absorption.
 

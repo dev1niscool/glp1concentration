@@ -128,6 +128,9 @@ input:hover, select:hover { border-color: #9aaa9e; }
 .metric-grid strong { display: block; overflow: hidden; font: 400 clamp(19px,2.2vw,28px) Georgia, serif; text-overflow: ellipsis; white-space: nowrap; }
 .metric-grid strong small { font: 700 8px Arial, sans-serif; color: #6e7a72; }
 .metric-grid p { margin: 5px 0 0; color: #838d85; font-size: 9px; }
+.compounded-disclaimer { margin-top: 20px; padding: 16px 18px; border: 1px solid #d6c6aa; border-radius: 12px; background: #fff9ee; color: #64533a; }
+.compounded-disclaimer strong { display: block; margin-bottom: 6px; font: 400 16px Georgia, serif; }
+.compounded-disclaimer p { margin: 0; font-size: 10px; line-height: 1.65; }
 
 .compounded-page { background: radial-gradient(circle at 89% 9%, rgba(221,169,117,.22), transparent 19%), linear-gradient(rgba(28,55,41,.025) 1px, transparent 1px), var(--paper); background-size: auto, 100% 72px, auto; }
 .compounded-alert { max-width: 1320px; margin: 0 auto 20px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 22px; align-items: center; padding: 17px 19px; border: 1px solid #d7c09f; border-radius: 14px; background: #fff8e9; color: #56452e; }
@@ -189,8 +192,8 @@ input:hover, select:hover { border-color: #9aaa9e; }
 .equation-card span, .equation-grid span { display: block; margin-bottom: 14px; color: #aebaaf; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
 .equation-card code { display: block; min-width: 650px; color: var(--lime); font: 400 clamp(16px,2vw,23px)/1.4 Georgia, serif; white-space: nowrap; }
 .equation-card small { display: block; margin-top: 11px; color: #9caaa1; font-size: 10px; }
-.amount-equation { margin-top: 14px; background: #263c31; }
-.amount-equation code { min-width: 0; }
+.surrogate-card { margin-top: 14px; background: #263c31; }
+.equation-card.surrogate-card code { min-width: 0; }
 .model-distinction { margin: 17px 0 0; padding: 17px 20px; border-left: 3px solid #9fc94f; background: rgba(255,255,255,.47); color: var(--muted); font-size: 11px; line-height: 1.7; }
 .model-distinction strong { color: var(--ink); }
 .equation-grid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #c6d0c6; border-left: 1px solid #c6d0c6; margin-top: 18px; }
