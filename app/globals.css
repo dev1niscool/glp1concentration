@@ -80,6 +80,15 @@ input:hover, select:hover { border-color: #9aaa9e; }
 .remove-button:hover { background: #fff; color: #8c3f2f; }
 .compound-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .compound-grid label { margin-top: 12px; }
+.dose-field { min-width: 0; }
+.dose-help { margin: 5px 0 0; color: #53665b; }
+.dose-help summary { display: flex; align-items: center; justify-content: space-between; gap: 7px; cursor: pointer; list-style: none; font-size: 9px; font-weight: 800; line-height: 1.35; }
+.dose-help summary::-webkit-details-marker { display: none; }
+.dose-help summary::after { content: '+'; display: grid; place-items: center; flex: none; width: 16px; height: 16px; border: 1px solid #c3cec4; border-radius: 50%; font-size: 11px; }
+.dose-help[open] summary::after { content: '−'; }
+.dose-help > div { margin-top: 7px; padding: 9px; border: 1px solid #d5ddd4; border-radius: 9px; background: #f9fbf6; }
+.dose-help p { margin: 0; color: #6c786f; font-size: 9px; line-height: 1.5; }
+.dose-help a { display: inline-block; margin-top: 7px; color: #285b46; font-size: 9px; font-weight: 800; line-height: 1.4; }
 .pk-inline { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; color: #748078; font-size: 10px; }
 .pk-inline span, .chart-note span { width: 6px; height: 6px; flex: none; border-radius: 50%; background: #91b855; }
 .add-button { width: 100%; margin-top: 12px; border: 1px dashed #b8c5b9; border-radius: 11px; padding: 11px; background: rgba(255,255,255,.28); color: #3e5e4d; font-size: 11px; font-weight: 800; }
@@ -90,6 +99,8 @@ input:hover, select:hover { border-color: #9aaa9e; }
 .button-row button { border-radius: 10px; padding: 13px 14px; font-size: 11px; font-weight: 800; }
 .primary { display: flex; justify-content: space-between; border: 0; background: var(--ink); color: white; }
 .primary:hover { background: var(--green); }
+.primary:disabled { opacity: .48; cursor: not-allowed; }
+.primary:disabled:hover { background: var(--ink); }
 .reset-button { border: 1px solid #cbd4cb; background: transparent; color: #536058; }
 .reset-button:hover { background: #fff; }
 
@@ -98,6 +109,10 @@ input:hover, select:hover { border-color: #9aaa9e; }
 .chart-head p { margin: 0 0 5px; font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); font-weight: 800; }
 .chart-head h2 { margin: 0; font: 400 30px Georgia, serif; }
 .chart-wrap { margin-top: 24px; }
+.chart-empty { min-height: 390px; display: grid; place-content: center; justify-items: center; padding: 32px; text-align: center; }
+.chart-empty > span { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 14px; border-radius: 50%; background: var(--ink); color: var(--lime); font-size: 17px; }
+.chart-empty strong { font: 400 23px Georgia, serif; }
+.chart-empty p { max-width: 310px; margin: 8px 0 0; color: #7a847d; font-size: 10px; line-height: 1.5; }
 .chart-frame { position: relative; min-height: 380px; width: 100%; }
 .plot-canvas { width: 100%; height: 100%; touch-action: none; }
 .chart-tooltip { position: absolute; z-index: 3; top: 32px; min-width: 175px; padding: 12px; transform: translateX(12px); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; background: rgba(20,34,28,.94); color: white; pointer-events: none; box-shadow: 0 12px 30px rgba(20,34,28,.18); backdrop-filter: blur(8px); }

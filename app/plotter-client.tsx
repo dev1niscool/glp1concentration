@@ -351,28 +351,39 @@ function CompoundCard({
         </select>
       </label>
       <div className="compound-grid">
-        <label>
-          {variant === 'compounded' ? 'Weekly dose (mg)' : 'Weekly dose'}
-          {variant === 'branded' ? (
-            <select value={regimen.doseMg} onChange={(event) => update({ doseMg: Number(event.target.value) })}>
-              {profile.doses.map((dose) => <option key={dose} value={dose}>{dose} mg</option>)}
-            </select>
-          ) : (
-            <span className="input-with-suffix">
-              <input
-                type="number"
-                min="0.001"
-                max="100"
-                step="0.001"
-                inputMode="decimal"
-                value={regimen.doseMg}
-                onChange={(event) => update({ doseMg: Math.max(0.001, Number(event.target.value) || 0.001) })}
-                aria-label="Custom weekly dose in mg"
-              />
-              <small>mg</small>
-            </span>
+        <div className="dose-field">
+          <label>
+            {variant === 'compounded' ? 'Weekly dose (mg)' : 'Weekly dose'}
+            {variant === 'branded' ? (
+              <select value={regimen.doseMg} onChange={(event) => update({ doseMg: Number(event.target.value) })}>
+                {profile.doses.map((dose) => <option key={dose} value={dose}>{dose} mg</option>)}
+              </select>
+            ) : (
+              <span className="input-with-suffix">
+                <input
+                  type="number"
+                  min="0.001"
+                  max="100"
+                  step="0.001"
+                  inputMode="decimal"
+                  value={regimen.doseMg}
+                  onChange={(event) => update({ doseMg: Math.max(0.001, Number(event.target.value) || 0.001) })}
+                  aria-label="Custom weekly dose in mg"
+                />
+                <small>mg</small>
+              </span>
+            )}
+          </label>
+          {variant === 'compounded' && (
+            <details className="dose-help">
+              <summary>Need to calculate your dose?</summary>
+              <div>
+                <p>Use this calculator to convert your vial concentration (mg/mL or mg/0.5 mL) and syringe units into an estimated weekly dose in milligrams.</p>
+                <a href="https://www.fatscientist.com/reverse-dosage-calculator" target="_blank" rel="noreferrer">Open the reverse dosage calculator <span aria-hidden="true">↗</span></a>
+              </div>
+            </details>
           )}
-        </label>
+        </div>
         <label>
           Dose time
           <select value={regimen.timeOfDay} onChange={(event) => update({ timeOfDay: event.target.value as DoseTime })}>
@@ -412,14 +423,17 @@ function CompoundCard({
 
 export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const [startDate, setStartDate] = useState(todayInputValue);
-  const [totalWeeks, setTotalWeeks] = useState(16);
+  const [durationInput, setDurationInput] = useState('');
   const [draftRegimens, setDraftRegimens] = useState<Regimen[]>(() => defaultRegimens(variant));
   const [plottedRegimens, setPlottedRegimens] = useState<Regimen[]>(() => defaultRegimens(variant));
   const [mode, setMode] = useState<PlotMode>('accumulate');
   const [plotPulse, setPlotPulse] = useState(false);
+  const totalWeeks = durationInput === '' ? null : Number(durationInput);
 
   const samples = useMemo(
-    () => plottedRegimens.map((regimen) => sampleRegimen(regimen, totalWeeks, STEP_HOURS)),
+    () => totalWeeks === null
+      ? []
+      : plottedRegimens.map((regimen) => sampleRegimen(regimen, totalWeeks, STEP_HOURS)),
     [plottedRegimens, totalWeeks],
   );
   const combined = useMemo(
@@ -431,7 +445,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const mainSeries = mode === 'accumulate'
     ? combined
     : samples.reduce((best, values) => maxOf(values) > maxOf(best) ? values : best, samples[0] ?? [0]);
-  const peakIndex = mainSeries.indexOf(maxOf(mainSeries));
+  const peakIndex = Math.max(0, mainSeries.indexOf(maxOf(mainSeries)));
   const endValue = mode === 'accumulate'
     ? combined.at(-1) ?? 0
     : samples.reduce((sum, values) => sum + (values.at(-1) ?? 0), 0);
@@ -444,18 +458,25 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
     setDraftRegimens((current) => current.map((regimen, regimenIndex) => regimenIndex === index ? next : regimen));
   }
 
-  function updateDuration(rawWeeks: number) {
-    const weeks = Math.max(1, Math.min(520, Math.round(rawWeeks || 1)));
+  function updateDuration(rawValue: string) {
+    if (rawValue === '') {
+      setDurationInput('');
+      return;
+    }
+    const rawWeeks = Number(rawValue);
+    if (!Number.isFinite(rawWeeks)) return;
+    const weeks = Math.max(1, Math.min(520, Math.round(rawWeeks)));
     const clamp = (regimen: Regimen) => {
       const startWeek = Math.min(regimen.startWeek, weeks);
       return { ...regimen, startWeek, endWeek: Math.max(startWeek, Math.min(regimen.endWeek, weeks)) };
     };
-    setTotalWeeks(weeks);
+    setDurationInput(String(weeks));
     setDraftRegimens((current) => current.map(clamp));
     setPlottedRegimens((current) => current.map(clamp));
   }
 
   function plot() {
+    if (totalWeeks === null) return;
     setPlottedRegimens(draftRegimens.map((regimen) => ({ ...regimen })));
     setPlotPulse(true);
     window.setTimeout(() => setPlotPulse(false), 520);
@@ -464,7 +485,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   function reset() {
     const defaults = defaultRegimens(variant);
     setStartDate(todayInputValue());
-    setTotalWeeks(16);
+    setDurationInput('');
     setDraftRegimens(defaults);
     setPlottedRegimens(defaults);
     setMode('accumulate');
@@ -506,7 +527,17 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             <label>Start date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
             <label>Graph duration
               <span className="input-with-suffix">
-                <input type="number" min="1" max="520" step="1" value={totalWeeks} onChange={(event) => updateDuration(Number(event.target.value))} />
+                <input
+                  type="number"
+                  min="1"
+                  max="520"
+                  step="1"
+                  required
+                  placeholder="Enter weeks"
+                  aria-label="Graph duration in weeks"
+                  value={durationInput}
+                  onChange={(event) => updateDuration(event.target.value)}
+                />
                 <small>weeks</small>
               </span>
             </label>
@@ -525,7 +556,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
                 key={regimen.id}
                 regimen={regimen}
                 index={index}
-                totalWeeks={totalWeeks}
+                totalWeeks={totalWeeks ?? 520}
                 removable={draftRegimens.length > 1}
                 variant={variant}
                 onChange={(next) => updateRegimen(index, next)}
@@ -537,27 +568,28 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
           <button
             className="add-button"
             type="button"
-            disabled={draftRegimens.length >= 5}
+            disabled={totalWeeks === null || draftRegimens.length >= 5}
             onClick={() => setDraftRegimens((current) => {
               const available = variant === 'branded' ? BRANDED_COMPOUNDS : COMPOUNDED_COMPOUNDS;
               const previous = current.at(-1);
-              const previousIndex = Math.max(0, available.indexOf(previous?.compound ?? available[0]));
-              const compound = available[(previousIndex + 1) % available.length];
+              const first = current[0];
+              const compound = first?.compound ?? available[0];
+              const weeks = totalWeeks ?? 1;
               const nextId = current.reduce((maximum, item) => Math.max(maximum, item.id), 0) + 1;
-              const startWeek = Math.min(totalWeeks, (previous?.endWeek ?? 0) + 1);
+              const startWeek = Math.min(weeks, (previous?.endWeek ?? 0) + 1);
               return [...current, {
                 id: nextId,
                 compound,
-                doseMg: variant === 'branded' ? COMPOUNDS[compound].doses[0] : previous?.doseMg ?? 1,
+                doseMg: variant === 'branded' ? COMPOUNDS[compound].doses[0] : first?.doseMg ?? 1,
                 startWeek,
-                endWeek: Math.min(totalWeeks, startWeek + 3),
+                endWeek: Math.min(weeks, startWeek + 3),
                 timeOfDay: previous?.timeOfDay ?? 'morning',
               }];
             })}
           ><span aria-hidden="true">+</span> Another compound</button>
 
           <div className="button-row">
-            <button className="primary" type="button" onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
+            <button className="primary" type="button" disabled={totalWeeks === null} onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
             <button className="reset-button" type="button" onClick={reset}>Reset</button>
           </div>
         </aside>
@@ -567,15 +599,25 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             <div><p>Estimated concentration</p><h2>Plasma level over time</h2></div>
             <span className="unit-chip">ng / mL</span>
           </div>
-          <EstimateChart regimens={plottedRegimens} mode={mode} totalWeeks={totalWeeks} startDate={startDate} />
-          <p className="chart-note"><span /> Hover or tap the curve for an estimate and time-of-day category.</p>
-          {mode === 'accumulate' && plottedRegimens.length > 1 && <p className="sum-note">The combined line sums modeled mass concentrations for visual context only; it does not imply dose, safety, or effect equivalence.</p>}
+          {totalWeeks === null ? (
+            <div className="chart-empty" role="status">
+              <span aria-hidden="true">↗</span>
+              <strong>Enter a graph duration to begin.</strong>
+              <p>Choose any whole number of weeks, then plot your concentration estimate.</p>
+            </div>
+          ) : (
+            <>
+              <EstimateChart regimens={plottedRegimens} mode={mode} totalWeeks={totalWeeks} startDate={startDate} />
+              <p className="chart-note"><span /> Hover or tap the curve for an estimate and time-of-day category.</p>
+              {mode === 'accumulate' && plottedRegimens.length > 1 && <p className="sum-note">The combined line sums modeled mass concentrations for visual context only; it does not imply dose, safety, or effect equivalence.</p>}
 
-          <div className="metric-grid">
-            <div><span>Modeled peak</span><strong>{formatConcentration(peak)} <small>{unit}</small></strong><p>{longDate(dateAtHour(startDate, peakIndex * STEP_HOURS))}</p></div>
-            <div><span>Timeline AUC</span><strong>{Math.round(auc).toLocaleString()} <small>ng·h/mL</small></strong><p>Area under the displayed curve</p></div>
-            <div><span>At graph end</span><strong>{formatConcentration(endValue)} <small>{unit}</small></strong><p>After {totalWeeks} plotted {totalWeeks === 1 ? 'week' : 'weeks'}</p></div>
-          </div>
+              <div className="metric-grid">
+                <div><span>Modeled peak</span><strong>{formatConcentration(peak)} <small>{unit}</small></strong><p>{longDate(dateAtHour(startDate, peakIndex * STEP_HOURS))}</p></div>
+                <div><span>Timeline AUC</span><strong>{Math.round(auc).toLocaleString()} <small>ng·h/mL</small></strong><p>Area under the displayed curve</p></div>
+                <div><span>At graph end</span><strong>{formatConcentration(endValue)} <small>{unit}</small></strong><p>After {totalWeeks} plotted {totalWeeks === 1 ? 'week' : 'weeks'}</p></div>
+              </div>
+            </>
+          )}
           {variant === 'compounded' && (
             <aside className="compounded-disclaimer" role="note">
               <strong>How to read this estimate</strong>
