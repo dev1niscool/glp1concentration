@@ -32,11 +32,27 @@ test('semaglutide steady-state average reproduces the published model check', ()
   assert.ok(Math.abs(average - 62.3) < 0.5, `expected about 62.3 ng/mL, got ${average}`);
 });
 
-test('tirzepatide reduced-model peak time falls inside the FDA observed range', () => {
+test('tirzepatide uses the published two-compartment fixed effects and exposure', () => {
   const profile = COMPOUNDS.tirzepatide;
-  const ke = Math.log(2) / (profile.halfLifeDays * 24);
-  const tMaxHours = Math.log(profile.absorptionRatePerHour / ke) / (profile.absorptionRatePerHour - ke);
-  assert.ok(tMaxHours >= 8 && tMaxHours <= 72, `peak was ${tMaxHours} hours`);
+  assert.equal(profile.model, 'two-compartment');
+  assert.equal(profile.bioavailability, 0.8);
+  assert.equal(profile.clearanceLitersPerHour, 0.0329);
+  assert.equal(profile.intercompartmentalClearanceLitersPerHour, 0.126);
+  assert.equal(profile.centralVolumeLiters, 2.47);
+  assert.equal(profile.peripheralVolumeLiters, 3.98);
+
+  let peak = { hour: 0, concentration: 0 };
+  for (let hour = 0; hour <= 168; hour += 0.05) {
+    const concentration = doseConcentrationNgMl('tirzepatide', 5, hour);
+    if (concentration > peak.concentration) peak = { hour, concentration };
+  }
+  assert.ok(peak.hour >= 29.5 && peak.hour <= 29.7, `peak was ${peak.hour} hours`);
+  assert.ok(peak.concentration >= 514 && peak.concentration <= 516, `peak was ${peak.concentration} ng/mL`);
+
+  const singleDose = sampleRegimen({ id: 3, compound: 'tirzepatide', doseMg: 5, startWeek: 1, endWeek: 1, timeOfDay: 'morning' }, 12, 0.25);
+  const modeledAuc = trapezoidAuc(singleDose, 0.25);
+  const massBalanceAuc = profile.bioavailability * 5 * 1000 / profile.clearanceLitersPerHour;
+  assert.ok(Math.abs(modeledAuc / massBalanceAuc - 1) < 0.002, `AUC was ${modeledAuc}, expected ${massBalanceAuc}`);
 });
 
 test('dose time offsets delay the first contribution until the selected category', () => {

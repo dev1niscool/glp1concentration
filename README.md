@@ -10,10 +10,10 @@ The Methodology page documents the equation, exact parameters used by the code, 
 
 ## Model
 
-The calculator uses a one-compartment model with first-order subcutaneous absorption and elimination. Each weekly dose contribution is superposed across the selected timeline. Every tab reports estimated plasma concentration in ng/mL, not a measured blood level or a personal dosing recommendation.
+The calculator uses the published one-compartment structure for semaglutide, the published two-compartment structure for tirzepatide, and a fitted one-compartment surrogate for retatrutide. Each weekly dose contribution is superposed across the selected timeline. Every tab reports estimated plasma concentration in ng/mL, not a measured blood level or a personal dosing recommendation.
 
 - Semaglutide: approximately 7-day half-life, kₐ 0.0286 h⁻¹, apparent V/F 12.2 L.
-- Tirzepatide: approximately 5-day half-life, kₐ 0.0373 h⁻¹, apparent V/F 10.3 L.
+- Tirzepatide: two compartments with F 0.80, kₐ 0.0373 h⁻¹, CL 0.0329 L/h, Q 0.126 L/h, Vc 2.47 L, and Vp 3.98 L at the published 70 kg reference.
 - Retatrutide: approximately 6-day half-life, fitted kₐ 0.08 h⁻¹, and cohort-mean apparent Vz/F 7.36 L from phase 1 PK.
 
 Sources are linked on the site and include FDA prescribing information plus population pharmacokinetic analyses for both compounds. Rybelsus is not included because daily oral semaglutide has different doses and absorption.

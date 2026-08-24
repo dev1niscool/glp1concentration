@@ -416,7 +416,7 @@ function CompoundCard({
           />
         </label>
       </div>
-      <p className="pk-inline"><span /> {profile.halfLifeDays}-day half-life · weekly injection model</p>
+      <p className="pk-inline"><span /> {profile.halfLifeDays}-day half-life · {profile.model === 'two-compartment' ? 'two-compartment' : 'one-compartment'} weekly model</p>
     </fieldset>
   );
 }

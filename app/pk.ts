@@ -10,18 +10,34 @@ export type Regimen = {
   timeOfDay: DoseTime;
 };
 
-export type CompoundProfile = {
+type CompoundProfileBase = {
   id: CompoundId;
   name: string;
   brands: string;
   doses: number[];
   halfLifeDays: number;
   absorptionRatePerHour: number;
-  apparentVolumeLiters: number;
   modelNote: string;
   color: string;
   fill: string;
 };
+
+type OneCompartmentProfile = CompoundProfileBase & {
+  model: 'one-compartment';
+  apparentVolumeLiters: number;
+};
+
+type TwoCompartmentProfile = CompoundProfileBase & {
+  model: 'two-compartment';
+  bioavailability: number;
+  clearanceLitersPerHour: number;
+  intercompartmentalClearanceLitersPerHour: number;
+  centralVolumeLiters: number;
+  peripheralVolumeLiters: number;
+  referenceWeightKg: number;
+};
+
+export type CompoundProfile = OneCompartmentProfile | TwoCompartmentProfile;
 
 export const COMPOUNDS: Record<CompoundId, CompoundProfile> = {
   semaglutide: {
@@ -31,6 +47,7 @@ export const COMPOUNDS: Record<CompoundId, CompoundProfile> = {
     doses: [0.25, 0.5, 1, 1.7, 2.4],
     halfLifeDays: 7.37,
     absorptionRatePerHour: 0.0286,
+    model: 'one-compartment',
     apparentVolumeLiters: 12.2,
     modelNote: 'Petri 2018 one-compartment population estimate',
     color: '#174c38',
@@ -43,8 +60,14 @@ export const COMPOUNDS: Record<CompoundId, CompoundProfile> = {
     doses: [2.5, 5, 7.5, 10, 12.5, 15],
     halfLifeDays: 5.4,
     absorptionRatePerHour: 0.0373,
-    apparentVolumeLiters: 10.3,
-    modelNote: 'Schneck 2024 population mean reduced to one compartment',
+    model: 'two-compartment',
+    bioavailability: 0.8,
+    clearanceLitersPerHour: 0.0329,
+    intercompartmentalClearanceLitersPerHour: 0.126,
+    centralVolumeLiters: 2.47,
+    peripheralVolumeLiters: 3.98,
+    referenceWeightKg: 70,
+    modelNote: 'Schneck 2024 two-compartment population fixed effects at 70 kg',
     color: '#a6cf27',
     fill: 'rgba(181, 220, 55, 0.18)',
   },
@@ -55,6 +78,7 @@ export const COMPOUNDS: Record<CompoundId, CompoundProfile> = {
     doses: [],
     halfLifeDays: 6,
     absorptionRatePerHour: 0.08,
+    model: 'one-compartment',
     apparentVolumeLiters: 7.36,
     modelNote: 'One-compartment surrogate fitted to Coskun 2022 phase 1 PK',
     color: '#a85e35',
@@ -75,9 +99,11 @@ export const DOSE_TIME_LABELS: Record<DoseTime, string> = {
 };
 
 /**
- * One-compartment, first-order absorption and elimination estimate after a
- * subcutaneous dose. V/F is apparent volume, so dose is not multiplied by F.
- * The result is ng/mL (numerically equivalent to micrograms/L).
+ * Population-reference plasma concentration after one subcutaneous dose.
+ * Semaglutide and retatrutide use a one-compartment Bateman function with
+ * apparent volume V/F. Tirzepatide uses the published two-compartment fixed
+ * effects with first-order absorption and central elimination. The result is
+ * ng/mL (numerically equivalent to micrograms/L).
  */
 export function doseConcentrationNgMl(
   compound: CompoundId,
@@ -87,6 +113,25 @@ export function doseConcentrationNgMl(
   if (hoursAfterDose < 0) return 0;
   const profile = COMPOUNDS[compound];
   const ka = profile.absorptionRatePerHour;
+
+  if (profile.model === 'two-compartment') {
+    const k10 = profile.clearanceLitersPerHour / profile.centralVolumeLiters;
+    const k12 = profile.intercompartmentalClearanceLitersPerHour / profile.centralVolumeLiters;
+    const k21 = profile.intercompartmentalClearanceLitersPerHour / profile.peripheralVolumeLiters;
+    const rateSum = k10 + k12 + k21;
+    const rateRoot = Math.sqrt(rateSum ** 2 - 4 * k10 * k21);
+    const alpha = (rateSum + rateRoot) / 2;
+    const beta = (rateSum - rateRoot) / 2;
+    const alphaWeight = (alpha - k21) / (alpha - beta);
+    const betaWeight = (k21 - beta) / (alpha - beta);
+    const absorbedTerm = (rate: number) =>
+      (ka / (ka - rate)) * (Math.exp(-rate * hoursAfterDose) - Math.exp(-ka * hoursAfterDose));
+    const doseOverCentralVolume = profile.bioavailability * doseMg * 1000 / profile.centralVolumeLiters;
+    return Math.max(0, doseOverCentralVolume * (
+      alphaWeight * absorbedTerm(alpha) + betaWeight * absorbedTerm(beta)
+    ));
+  }
+
   const volume = profile.apparentVolumeLiters;
   const ke = Math.log(2) / (profile.halfLifeDays * 24);
   const scale = (doseMg * ka * 1000) / (volume * (ka - ke));
