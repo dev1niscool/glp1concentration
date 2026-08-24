@@ -339,8 +339,11 @@ footer p { margin: 0; font-size: 10px; }
   .method-cards article + article { padding-left: 0; border-left: 0; }
   .caveat-section > div:first-child { align-items: flex-start; }
   .method-hero h1 { font-size: 47px; }
-  .method-nav { grid-template-columns: repeat(5, minmax(74px,1fr)); overflow-x: auto; }
-  .method-nav a { white-space: nowrap; }
+  .method-nav { position: static; top: auto; z-index: auto; grid-template-columns: repeat(2,minmax(0,1fr)); overflow: hidden; backdrop-filter: none; }
+  .method-nav a { min-width: 0; padding: 12px 8px; border-right: 0; border-bottom: 1px solid #d3dcd3; white-space: normal; }
+  .method-nav a:nth-child(odd):not(:last-child) { border-right: 1px solid #d3dcd3; }
+  .method-nav a:last-child { grid-column: 1 / -1; border-bottom: 0; }
+  .method-block, .method-sources { scroll-margin-top: 20px; }
   .equation-grid, .parameter-notes, .check-grid { grid-template-columns: 1fr; }
   .parameter-notes article + article { padding-left: 0; border-left: 0; border-top: 1px solid #bdc9be; }
   .equation-card { padding: 21px 18px; }
