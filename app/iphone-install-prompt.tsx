@@ -46,7 +46,7 @@ export function IPhoneInstallPrompt() {
     <aside className="iphone-install-prompt" aria-label="Save this site to your iPhone Home Screen">
       <button type="button" onClick={dismiss} aria-label="Dismiss Home Screen suggestion">×</button>
       <strong>Save to your Home Screen</strong>
-      <p>Tap the Share icon below, then choose <b>Add to Home Screen</b> to come back anytime.</p>
+      <p>Tap the three dots at the bottom right, choose Share, then <b>Add to Home Screen</b>.</p>
       <span aria-hidden="true" />
     </aside>
   );
