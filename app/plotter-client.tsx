@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   COMPOUNDS,
@@ -884,6 +885,12 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             <button className="primary" type="button" disabled={!startDate || totalWeeks === null || !bodySizeProfileValid} onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
             <button className="reset-button" type="button" onClick={reset}>Reset</button>
           </div>
+          {variant === 'branded' && (
+            <Link className="custom-dose-link" href="/compounded" aria-label="Open the compounded plotter for custom doses and schedule intervals">
+              <span><strong>Have a custom dose or interval?</strong><small>Open the compounded plotter</small></span>
+              <b aria-hidden="true">↗</b>
+            </Link>
+          )}
         </aside>
 
         <div className="chart-panel">
