@@ -863,7 +863,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
                 doseIntervalDays: variant === 'compounded' ? first?.doseIntervalDays ?? 7 : 7,
               }];
             })}
-          ><span aria-hidden="true">+</span> Another compound</button>
+          ><span aria-hidden="true">+</span> Add next dose &amp; duration</button>
 
           <div className="button-row">
             <button className="primary" type="button" disabled={!startDate || totalWeeks === null || !bodySizeProfileValid} onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
