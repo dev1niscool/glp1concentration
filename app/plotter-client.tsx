@@ -463,9 +463,16 @@ function CompoundCard({
   const displayName = variant === 'compounded' && regimen.compound !== 'retatrutide'
     ? `Compounded ${profile.name}`
     : profile.name;
+  const [doseMgDraft, setDoseMgDraft] = useState<string | null>(null);
   const [startWeekDraft, setStartWeekDraft] = useState<string | null>(null);
   const [endWeekDraft, setEndWeekDraft] = useState<string | null>(null);
   const [intervalDaysDraft, setIntervalDaysDraft] = useState<string | null>(null);
+
+  function applyDoseMg(rawValue: string) {
+    const parsedDose = Number(rawValue);
+    if (!Number.isFinite(parsedDose)) return;
+    update({ doseMg: Math.max(0.001, Math.min(100, parsedDose)) });
+  }
 
   function applyStartWeek(rawValue: string) {
     const startWeek = Math.max(1, Math.min(totalWeeks, Math.round(Number(rawValue)) || 1));
@@ -534,8 +541,16 @@ function CompoundCard({
                   max="100"
                   step="0.001"
                   inputMode="decimal"
-                  value={regimen.doseMg}
-                  onChange={(event) => update({ doseMg: Math.max(0.001, Number(event.target.value) || 0.001) })}
+                  value={doseMgDraft ?? String(regimen.doseMg)}
+                  onChange={(event) => {
+                    const rawValue = event.target.value;
+                    setDoseMgDraft(rawValue);
+                    if (rawValue !== '') applyDoseMg(rawValue);
+                  }}
+                  onBlur={(event) => {
+                    if (event.target.value !== '') applyDoseMg(event.target.value);
+                    setDoseMgDraft(null);
+                  }}
                   aria-label={regimen.useCustomDoseInterval ? 'Custom dose per injection in mg' : 'Custom weekly dose in mg'}
                 />
                 <small>mg</small>
