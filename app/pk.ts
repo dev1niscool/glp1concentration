@@ -12,7 +12,55 @@ export type Regimen = {
   timeOfDay: DoseTime;
   useCustomDoseInterval: boolean;
   doseIntervalDays: number;
+  explicitDoseHours?: number[];
 };
+
+export type CalendarInjection = {
+  id: number;
+  compound: 'semaglutide' | 'tirzepatide';
+  doseMg: number;
+  date: string;
+  timeOfDay: DoseTime;
+};
+
+// Calendar days are modeled as 24 hours, independent of daylight-saving changes.
+function calendarDay(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (date < '0001-01-01' || date > '9999-12-24') return null;
+  const timestamp = Date.parse(`${date}T00:00:00Z`);
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== date) return null;
+  return timestamp / 86_400_000;
+}
+
+export function calendarSchedule(injections: CalendarInjection[]) {
+  if (injections.length === 0) return { error: 'Add at least one injection.' } as const;
+  const days = injections.map((injection) => calendarDay(injection.date));
+  if (days.some((day) => day === null)) return { error: 'Choose a valid date for every injection.' } as const;
+  if (injections.some((injection) => !COMPOUNDS[injection.compound]?.doses.includes(injection.doseMg) ||
+    !Object.hasOwn(DOSE_TIME_OFFSETS, injection.timeOfDay))) {
+    return { error: 'Choose a peptide, dose, and time for every injection.' } as const;
+  }
+  const firstDay = Math.min(...days as number[]);
+  const hours = injections.map((injection, index) =>
+    ((days[index] as number) - firstDay) * 24 + DOSE_TIME_OFFSETS[injection.timeOfDay]);
+  const lastHour = Math.max(...hours) + HOURS_PER_WEEK;
+  if (lastHour > 520 * HOURS_PER_WEEK) return { error: 'Keep the full graph, including the final week, within 520 weeks.' } as const;
+  const startDate = new Date(firstDay * 86_400_000).toISOString().slice(0, 10);
+  const endDate = new Date(firstDay * 86_400_000 + lastHour * 3_600_000).toISOString().slice(0, 10);
+  const regimens: Regimen[] = injections.map((injection, index) => ({
+    id: injection.id,
+    compound: injection.compound,
+    doseMg: injection.doseMg,
+    startWeek: Math.floor(hours[index] / HOURS_PER_WEEK) + 1,
+    endWeek: Math.floor(hours[index] / HOURS_PER_WEEK) + 1,
+    timeOfDay: injection.timeOfDay,
+    useCustomDoseInterval: false,
+    doseIntervalDays: 7,
+    explicitDoseHours: [hours[index]],
+  }));
+  return { error: null, startDate, endDate, totalWeeks: lastHour / HOURS_PER_WEEK,
+    firstDoseHour: Math.min(...hours), regimens } as const;
+}
 
 type CompoundProfileBase = {
   id: CompoundId;
@@ -149,6 +197,7 @@ export function regimenIntervalDays(regimen: Regimen) {
 }
 
 export function regimenDoseHours(regimen: Regimen) {
+  if (regimen.explicitDoseHours) return regimen.explicitDoseHours;
   const firstDoseHour = (regimen.startWeek - 1) * HOURS_PER_WEEK +
     DOSE_TIME_OFFSETS[regimen.timeOfDay];
   const endExclusiveHour = regimen.endWeek * HOURS_PER_WEEK;
@@ -394,8 +443,10 @@ export function sampleRegimen(
   }
   const lastHour = totalWeeks * HOURS_PER_WEEK;
   const samples: number[] = [];
-  for (let hour = 0; hour <= lastHour; hour += stepHours) {
-    samples.push(regimenConcentrationNgMl(regimen, hour, model));
+  // Fractional weeks can round just below a six-hour boundary. Include that sample.
+  const sampleCount = Math.floor(lastHour / stepHours + 1e-9);
+  for (let index = 0; index <= sampleCount; index += 1) {
+    samples.push(regimenConcentrationNgMl(regimen, index * stepHours, model));
   }
   return samples;
 }

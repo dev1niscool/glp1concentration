@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   COMPOUNDS,
+  CalendarInjection,
+  calendarSchedule,
+  regimenDoseHours,
   CompoundId,
   DOSE_TIME_LABELS,
-  DOSE_TIME_OFFSETS,
   DoseTime,
   formatConcentration,
   niceScale,
@@ -21,7 +23,7 @@ import {
 import { SiteFooter, SiteHeader } from './site-chrome';
 
 type PlotMode = 'accumulate' | 'compare';
-type PlotterVariant = 'branded' | 'compounded';
+type PlotterVariant = 'branded' | 'compounded' | 'custom-intervals';
 type MeasurementSystem = 'us' | 'metric';
 
 type BodySizeProfileForm = {
@@ -250,13 +252,17 @@ function EstimateChart({
       const color = SERIES_COLORS[index % SERIES_COLORS.length];
       return {
         id: String(regimen.id),
-        label: profile.name,
-        detail: `${regimen.doseMg} mg · weeks ${regimen.startWeek}–${regimen.endWeek} · ${DOSE_TIME_LABELS[regimen.timeOfDay]} · every ${regimen.useCustomDoseInterval ? regimen.doseIntervalDays : 7} days · ${modelDetail(regimen.compound, pkModel)}`,
+        label: regimen.explicitDoseHours
+          ? `${profile.name} · ${regimen.doseMg} mg · ${shortDate(dateAtHour(startDate, regimen.explicitDoseHours[0]))}`
+          : profile.name,
+        detail: regimen.explicitDoseHours
+          ? `${regimen.doseMg} mg · ${longDate(dateAtHour(startDate, regimen.explicitDoseHours[0]))} · ${DOSE_TIME_LABELS[regimen.timeOfDay]} · ${modelDetail(regimen.compound, pkModel)}`
+          : `${regimen.doseMg} mg · weeks ${regimen.startWeek}–${regimen.endWeek} · ${DOSE_TIME_LABELS[regimen.timeOfDay]} · every ${regimen.useCustomDoseInterval ? regimen.doseIntervalDays : 7} days · ${modelDetail(regimen.compound, pkModel)}`,
         color,
         values: sampleRegimen(regimen, totalWeeks, STEP_HOURS, pkModel),
       };
     }),
-    [pkModel, regimens, totalWeeks],
+    [pkModel, regimens, startDate, totalWeeks],
   );
 
   const displaySeries = useMemo<ChartSeries[]>(() => {
@@ -267,11 +273,11 @@ function EstimateChart({
     return [{
       id: 'combined',
       label: 'Combined estimate',
-      detail: `${individualSeries.length} active regimens`,
+      detail: `${individualSeries.length} ${regimens[0]?.explicitDoseHours ? 'scheduled injections' : 'active regimens'}`,
       color: '#174c38',
       values: total,
     }];
-  }, [individualSeries, mode]);
+  }, [individualSeries, mode, regimens]);
 
   const maxValue = useMemo(
     () => displaySeries.reduce((maximum, series) => Math.max(maximum, maxOf(series.values)), 0),
@@ -401,7 +407,7 @@ function EstimateChart({
         <canvas
           ref={canvasRef}
           className="plot-canvas"
-          aria-label={`Estimated plasma concentration chart from ${shortDate(dateAtHour(startDate, 0))} for ${totalWeeks} weeks. Use left and right arrow keys to inspect values.`}
+          aria-label={`Estimated plasma concentration chart from ${shortDate(dateAtHour(startDate, 0))} through ${longDate(dateAtHour(startDate, totalWeeks * HOURS_PER_WEEK))}. Use left and right arrow keys to inspect values.`}
           tabIndex={0}
           onPointerMove={setHoverFromPointer}
           onPointerDown={setHoverFromPointer}
@@ -662,8 +668,59 @@ function CompoundCard({
   );
 }
 
+function defaultInjections(): CalendarInjection[] {
+  return [{ id: 1, compound: 'semaglutide', doseMg: 0.25, date: '', timeOfDay: 'morning' }];
+}
+
+function InjectionCard({ injection, index, removable, onChange, onRemove }: {
+  injection: CalendarInjection;
+  index: number;
+  removable: boolean;
+  onChange: (next: CalendarInjection) => void;
+  onRemove: () => void;
+}) {
+  const update = (partial: Partial<CalendarInjection>) => onChange({ ...injection, ...partial });
+  return (
+    <fieldset className="dose-card injection-card">
+      <legend className="sr-only">Injection {index + 1}</legend>
+      <div className="dose-card-head">
+        <span className="dose-number">{index + 1}</span>
+        <div><strong>Injection {index + 1}</strong><small>{COMPOUNDS[injection.compound].name} · {injection.doseMg} mg</small></div>
+        {removable && <button className="remove-button" type="button" onClick={onRemove} aria-label={`Remove injection ${index + 1}`}>×</button>}
+      </div>
+      <label>Injection date
+        <input type="date" required min="0001-01-01" max="9999-12-24" value={injection.date} onChange={(event) => update({ date: event.target.value })} />
+      </label>
+      <label>Peptide
+        <select value={injection.compound} onChange={(event) => {
+          const compound = event.target.value as CalendarInjection['compound'];
+          update({ compound, doseMg: COMPOUNDS[compound].doses[0] });
+        }}>
+          {BRANDED_COMPOUNDS.map((compound) => <option key={compound} value={compound}>{COMPOUNDS[compound].name} · {COMPOUNDS[compound].brands}</option>)}
+        </select>
+      </label>
+      <div className="compound-grid">
+        <label>Dose per injection
+          <select value={injection.doseMg} onChange={(event) => update({ doseMg: Number(event.target.value) })}>
+            {COMPOUNDS[injection.compound].doses.map((dose) => <option key={dose} value={dose}>{dose} mg</option>)}
+          </select>
+        </label>
+        <label>Dose time
+          <select value={injection.timeOfDay} onChange={(event) => update({ timeOfDay: event.target.value as DoseTime })}>
+            {Object.entries(DOSE_TIME_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+      </div>
+    </fieldset>
+  );
+}
+
 export function PlotterClient({ variant }: { variant: PlotterVariant }) {
-  const [startDate, setStartDate] = useState(todayInputValue);
+  const isCalendar = variant === 'custom-intervals';
+  const [configuredStartDate, setStartDate] = useState(todayInputValue);
+  const [injections, setInjections] = useState<CalendarInjection[]>(defaultInjections);
+  const draftCalendar = useMemo(() => calendarSchedule(injections), [injections]);
+  const [plottedCalendar, setPlottedCalendar] = useState<{ startDate: string; totalWeeks: number } | null>(null);
   const [durationInput, setDurationInput] = useState('');
   const [draftRegimens, setDraftRegimens] = useState<Regimen[]>(() => defaultRegimens(variant));
   const [plottedRegimens, setPlottedRegimens] = useState<Regimen[]>(() => defaultRegimens(variant));
@@ -672,13 +729,14 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const [modelMode, setModelMode] = useState<PkModelMode>('one-compartment');
   const [bodySizeProfile, setBodySizeProfile] = useState<BodySizeProfileForm>(DEFAULT_BODY_SIZE_PROFILE);
   const [plottedPkModel, setPlottedPkModel] = useState<PkModelOptions>({ kind: 'one-compartment' });
-  const totalWeeks = durationInput === '' ? null : Number(durationInput);
+  const totalWeeks = isCalendar ? plottedCalendar?.totalWeeks ?? null : durationInput === '' ? null : Number(durationInput);
+  const startDate = isCalendar ? plottedCalendar?.startDate ?? '' : configuredStartDate;
   const hasDraftRetatrutide = draftRegimens.some((regimen) => regimen.compound === 'retatrutide');
-  const firstDraftTwoCompartmentDoseHourValue = draftRegimens
+  const firstDraftTwoCompartmentDoseHourValue = (isCalendar ? draftCalendar.regimens ?? [] : draftRegimens)
     .filter((regimen) => regimen.compound !== 'retatrutide')
     .reduce((earliest, regimen) => Math.min(
       earliest,
-      (regimen.startWeek - 1) * HOURS_PER_WEEK + DOSE_TIME_OFFSETS[regimen.timeOfDay],
+      ...regimenDoseHours(regimen),
     ), Number.POSITIVE_INFINITY);
   const firstDraftTwoCompartmentDoseHour = Number.isFinite(firstDraftTwoCompartmentDoseHourValue)
     ? firstDraftTwoCompartmentDoseHourValue
@@ -742,9 +800,15 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   }
 
   function plot() {
-    if (totalWeeks === null || !startDate) return;
     if (draftPkModel === null) return;
-    setPlottedRegimens(draftRegimens.map((regimen) => ({ ...regimen })));
+    if (isCalendar) {
+      if (draftCalendar.error !== null) return;
+      setPlottedCalendar({ startDate: draftCalendar.startDate, totalWeeks: draftCalendar.totalWeeks });
+      setPlottedRegimens(draftCalendar.regimens);
+    } else {
+      if (totalWeeks === null || !startDate) return;
+      setPlottedRegimens(draftRegimens.map((regimen) => ({ ...regimen })));
+    }
     setPlottedPkModel(draftPkModel);
     setPlotPulse(true);
     window.setTimeout(() => setPlotPulse(false), 520);
@@ -754,6 +818,8 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
     const defaults = defaultRegimens(variant);
     setStartDate(todayInputValue());
     setDurationInput('');
+    setInjections(defaultInjections());
+    setPlottedCalendar(null);
     setDraftRegimens(defaults);
     setPlottedRegimens(defaults);
     setMode('accumulate');
@@ -764,12 +830,12 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
 
   return (
     <main className={`site-shell ${variant === 'compounded' ? 'compounded-page' : ''}`}>
-      <SiteHeader active={variant === 'branded' ? 'plotter' : 'compounded'} />
+      <SiteHeader active={isCalendar ? 'custom-intervals' : variant === 'branded' ? 'plotter' : 'compounded'} />
 
       <section className="hero" id="top">
         <div>
-          <p className="eyebrow">{variant === 'branded' ? 'GLP-1 concentration plotter' : 'Compounded & investigational simulator'}</p>
-          <h1>{variant === 'branded' ? <>See how each weekly dose<br />builds in your system.</> : <>Explore custom doses<br />without false precision.</>}</h1>
+          <p className="eyebrow">{isCalendar ? 'Choose your own intervals' : variant === 'branded' ? 'GLP-1 concentration plotter' : 'Compounded & investigational simulator'}</p>
+          <h1>{isCalendar ? <>Your doses.<br />Your exact dates.</> : variant === 'branded' ? <>See how each weekly dose<br />builds in your system.</> : <>Explore custom doses<br />without false precision.</>}</h1>
         </div>
         <div className="hero-stat" aria-label="Drug half-life reference">
           <span>Reference half-lives</span>
@@ -791,10 +857,17 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
         <aside className="control-panel">
           <div className="panel-heading">
             <span>01</span>
-            <div><p>Build your regimen</p><small>{variant === 'compounded' ? 'Add doses across your timeline' : 'Add weekly doses across your timeline'}</small></div>
+            <div><p>Build your regimen</p><small>{isCalendar ? 'Choose a date and dose for each injection' : variant === 'compounded' ? 'Add doses across your timeline' : 'Add weekly doses across your timeline'}</small></div>
           </div>
 
-          <div className="setup-grid">
+          {isCalendar ? (
+            <div className="calendar-summary" aria-live="polite">
+              <strong>Automatic graph duration</strong>
+              <p>The graph starts on your earliest injection date and ends one week after your last injection.</p>
+              {draftCalendar.error === null && <b>{longDate(dateAtHour(draftCalendar.startDate, 0))} – {longDate(dateAtHour(draftCalendar.endDate, 0))}</b>}
+              {draftCalendar.error && <p className="calendar-error">{draftCalendar.error}</p>}
+            </div>
+          ) : <div className="setup-grid">
             <label>Start date<input type="date" required value={startDate} onChange={(event) => updateStartDate(event.target.value)} /></label>
             <label>Graph duration
               <span className="input-with-suffix">
@@ -812,7 +885,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
                 <small>weeks</small>
               </span>
             </label>
-          </div>
+          </div>}
 
           <div className="model-choice" aria-labelledby="pk-model-label">
             <div className="mode-label"><span id="pk-model-label">PK model</span><small>{modelMode === 'one-compartment' ? 'Fewer inputs' : 'More distribution detail'}</small></div>
@@ -841,7 +914,11 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
           </div>
 
           <div className="regimen-stack">
-            {draftRegimens.map((regimen, index) => (
+            {isCalendar ? injections.map((injection, index) => (
+              <InjectionCard key={injection.id} injection={injection} index={index} removable={injections.length > 1}
+                onChange={(next) => setInjections((current) => current.map((item) => item.id === injection.id ? next : item))}
+                onRemove={() => setInjections((current) => current.filter((item) => item.id !== injection.id))} />
+            )) : draftRegimens.map((regimen, index) => (
               <CompoundCard
                 key={regimen.id}
                 regimen={regimen}
@@ -856,7 +933,12 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             ))}
           </div>
 
-          <button
+          {isCalendar ? <button className="add-button" type="button" disabled={injections.length >= 100}
+            onClick={() => setInjections((current) => [...current, {
+              ...current[current.length - 1],
+              id: Math.max(...current.map((injection) => injection.id)) + 1,
+              date: '',
+            }])}><span aria-hidden="true">+</span> Add injection</button> : <button
             className="add-button"
             type="button"
             disabled={totalWeeks === null || draftRegimens.length >= 5}
@@ -879,10 +961,11 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
                 doseIntervalDays: variant === 'compounded' ? first?.doseIntervalDays ?? 7 : 7,
               }];
             })}
-          ><span aria-hidden="true">+</span> Add next dose &amp; duration</button>
+          ><span aria-hidden="true">+</span> Add next dose &amp; duration</button>}
+          {isCalendar && injections.length >= 100 && <p className="calendar-error">You can plot up to 100 injections at a time.</p>}
 
           <div className="button-row">
-            <button className="primary" type="button" disabled={!startDate || totalWeeks === null || !bodySizeProfileValid} onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
+            <button className="primary" type="button" disabled={(isCalendar ? draftCalendar.error !== null : !startDate || totalWeeks === null) || !bodySizeProfileValid} onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
             <button className="reset-button" type="button" onClick={reset}>Reset</button>
           </div>
           {variant === 'branded' && (
@@ -901,22 +984,23 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
           {totalWeeks === null ? (
             <div className="chart-empty" role="status">
               <span aria-hidden="true">↗</span>
-              <strong>Enter a graph duration to begin.</strong>
-              <p>Choose any whole number of weeks, then plot your concentration estimate.</p>
+              <strong>{isCalendar ? 'Enter your injection dates to begin.' : 'Enter a graph duration to begin.'}</strong>
+              <p>{isCalendar ? 'Add each injection, then select Plot concentration. Your graph duration is calculated automatically.' : 'Choose any whole number of weeks, then plot your concentration estimate.'}</p>
             </div>
           ) : (
             <>
-              <EstimateChart regimens={plottedRegimens} mode={mode} totalWeeks={totalWeeks} startDate={startDate} pkModel={plottedPkModel} />
+              <EstimateChart key={JSON.stringify(plottedRegimens)} regimens={plottedRegimens} mode={mode} totalWeeks={totalWeeks} startDate={startDate} pkModel={plottedPkModel} />
               <p className="chart-note"><span /> Hover or tap the curve for an estimate and time-of-day category.</p>
               {mode === 'accumulate' && plottedRegimens.length > 1 && <p className="sum-note">The combined line sums modeled mass concentrations for visual context only; it does not imply dose, safety, or effect equivalence.</p>}
 
               <div className="metric-grid">
                 <div><span>Modeled peak</span><strong>{formatConcentration(peak)} <small>{unit}</small></strong><p>{longDate(dateAtHour(startDate, peakIndex * STEP_HOURS))}</p></div>
                 <div><span>Timeline AUC</span><strong>{Math.round(auc).toLocaleString()} <small>ng·h/mL</small></strong><p>Area under the displayed curve</p></div>
-                <div><span>At graph end</span><strong>{formatConcentration(endValue)} <small>{unit}</small></strong><p>After {totalWeeks} plotted {totalWeeks === 1 ? 'week' : 'weeks'}</p></div>
+                <div><span>At graph end</span><strong>{formatConcentration(endValue)} <small>{unit}</small></strong><p>{isCalendar ? longDate(dateAtHour(startDate, totalWeeks * HOURS_PER_WEEK)) : <>After {totalWeeks} plotted {totalWeeks === 1 ? 'week' : 'weeks'}</>}</p></div>
               </div>
             </>
           )}
+          {isCalendar && <p className="calendar-summary">This population-model estimate describes the schedule you enter; it does not establish safety. Do not use the graph to start, stop, combine, or change medication.</p>}
           {variant === 'compounded' && (
             <aside className="compounded-disclaimer" role="note">
               <strong>How to read this estimate</strong>

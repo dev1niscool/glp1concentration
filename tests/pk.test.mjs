@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   COMPOUNDS,
+  calendarSchedule,
   DOSE_TIME_LABELS,
   doseConcentrationNgMl,
   modeledWeightAtHour,
@@ -12,6 +13,77 @@ import {
   tirzepatideParametersForPatient,
   trapezoidAuc,
 } from '../app/pk.ts';
+
+const customExample = ['2026-08-11', '2026-08-18', '2026-08-25', '2026-09-01', '2026-09-03']
+  .map((date, index) => ({ id: index + 1, date, compound: 'tirzepatide', doseMg: index === 2 ? 5 : 2.5, timeOfDay: 'morning' }));
+
+test('exact dates preserve the requested five doses and finish one week after the last injection', () => {
+  const schedule = calendarSchedule(customExample);
+  assert.equal(schedule.error, null);
+  assert.equal(schedule.startDate, '2026-08-11');
+  assert.equal(schedule.endDate, '2026-09-10');
+  assert.deepEqual(schedule.regimens.flatMap(regimenDoseHours), [6, 174, 342, 510, 558]);
+  assert.deepEqual(schedule.regimens.map((regimen) => regimen.doseMg), [2.5, 2.5, 5, 2.5, 2.5]);
+  assert.equal(schedule.totalWeeks * 168, 726);
+  const values = schedule.regimens.map((regimen) => sampleRegimen(regimen, schedule.totalWeeks));
+  assert.ok(values.every((series) => series.length === 122));
+  for (let index = 0; index < 122; index++) {
+    const expected = [6, 174, 342, 510, 558].reduce((sum, hour, doseIndex) =>
+      sum + doseConcentrationNgMl('tirzepatide', doseIndex === 2 ? 5 : 2.5, index * 6 - hour), 0);
+    assert.ok(Math.abs(values.reduce((sum, series) => sum + series[index], 0) - expected) < 1e-9);
+  }
+});
+
+test('calendar range follows earliest and latest dates after reordering, edits, and removal', () => {
+  const reordered = calendarSchedule([...customExample].reverse());
+  assert.equal(reordered.startDate, '2026-08-11');
+  assert.equal(reordered.endDate, '2026-09-10');
+  assert.equal(reordered.firstDoseHour, 6);
+  assert.equal(calendarSchedule(customExample.slice(0, -1)).endDate, '2026-09-08');
+  assert.equal(calendarSchedule([{ ...customExample[0], date: '2027-12-30' }]).endDate, '2028-01-06');
+});
+
+test('calendar schedules validate drafts and keep calendar-day intervals across DST and leap days', () => {
+  assert.ok(calendarSchedule([]).error);
+  for (const date of ['', '2026-02-29', '2026-13-01', 'invalid']) {
+    assert.ok(calendarSchedule([{ ...customExample[0], date }]).error);
+  }
+  assert.ok(calendarSchedule([{ ...customExample[0], doseMg: NaN }]).error);
+  assert.ok(calendarSchedule([customExample[0], { ...customExample[1], date: '2040-01-01' }]).error);
+  for (const [first, last, gap] of [['2026-03-07', '2026-03-09', 48], ['2026-10-31', '2026-11-02', 48], ['2028-02-28', '2028-03-01', 48]]) {
+    const schedule = calendarSchedule([{ ...customExample[0], date: first }, { ...customExample[1], date: last, timeOfDay: 'night' }]);
+    assert.equal(schedule.error, null);
+    assert.deepEqual(schedule.regimens.flatMap(regimenDoseHours), [6, gap + 18]);
+    assert.equal(sampleRegimen(schedule.regimens[0], schedule.totalWeeks).length, (gap + 18 + 168) / 6 + 1);
+  }
+});
+
+test('calendar injections use both compartment models and retain simultaneous injections', () => {
+  const schedule = calendarSchedule([customExample[0], { ...customExample[0], id: 2, doseMg: 5 }, { ...customExample[1], compound: 'semaglutide', doseMg: 0.5 }]);
+  for (const model of [{ kind: 'reference-two-compartment' }, {
+    kind: 'personalized-two-compartment', startingWeightKg: 100, heightCm: 175,
+    sex: 'male', firstDoseHour: schedule.firstDoseHour,
+  }]) {
+    const values = schedule.regimens.map((regimen) => sampleRegimen(regimen, schedule.totalWeeks, 6, model));
+    assert.ok(values.flat().every(Number.isFinite));
+    values[0].forEach((value, index) => assert.ok(Math.abs(values[1][index] - 2 * value) < 1e-8));
+    assert.ok(values[2].slice(0, 30).every((value) => value === 0));
+    assert.ok(values[2][30] > 0);
+    assert.ok(values.every((series) => series.length === schedule.totalWeeks * 168 / 6 + 1));
+  }
+});
+
+test('fractional-week timelines retain the exact final sample despite floating-point rounding', () => {
+  for (let day = 1; day <= 30; day++) {
+    for (const [timeOfDay, offset] of [['morning', 6], ['afternoon', 12], ['night', 18]]) {
+      const schedule = calendarSchedule([customExample[0], { ...customExample[1], date: `2026-09-${String(day).padStart(2, '0')}`, timeOfDay }]);
+      const expectedEndHour = (21 + day - 1) * 24 + offset + 168;
+      const values = sampleRegimen(schedule.regimens[1], schedule.totalWeeks);
+      assert.equal(values.length, expectedEndHour / 6 + 1);
+      assert.ok(Math.abs(values.at(-1) - doseConcentrationNgMl('tirzepatide', 2.5, 168)) < 1e-9);
+    }
+  }
+});
 
 test('concentration is zero before a dose and positive after absorption begins', () => {
   assert.equal(doseConcentrationNgMl('semaglutide', 0.5, -1), 0);

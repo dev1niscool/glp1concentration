@@ -30,9 +30,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   background-size: auto, 100% 72px, auto;
 }
 
-.topbar { height: 78px; display: flex; align-items: center; justify-content: flex-end; border-bottom: 1px solid rgba(20,34,28,.15); }
+.topbar { min-height: 78px; padding-block: 12px; display: flex; align-items: center; justify-content: flex-end; border-bottom: 1px solid rgba(20,34,28,.15); }
 .unit-chip { border: 1px solid var(--line); background: rgba(255,255,255,.6); border-radius: 100px; padding: 9px 13px; color: #4c5b52; font-size: 12px; text-decoration: none; }
-.page-tabs { display: flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 100px; background: rgba(255,255,255,.5); }
+.page-tabs { max-width: 100%; flex-wrap: wrap; justify-content: center; display: flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 100px; background: rgba(255,255,255,.5); }
 .page-tabs a { min-width: 82px; padding: 8px 12px; border-radius: 100px; color: #617068; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-align: center; text-decoration: none; text-transform: uppercase; }
 .page-tabs a.active { background: var(--ink); color: white; }
 .page-tabs a:not(.active):hover { background: white; color: var(--ink); }
@@ -342,9 +342,9 @@ footer p { margin: 0; font-size: 10px; }
 }
 
 @media (max-width: 540px) {
-  .topbar { height: 70px; }
-  .page-tabs { gap: 1px; }
-  .page-tabs a { min-width: auto; padding: 8px 7px; font-size: 7px; }
+  .topbar { min-height: 70px; }
+  .page-tabs { gap: 3px; border-radius: 18px; width: 100%; }
+  .page-tabs a { min-width: auto; padding: 10px 9px; font-size: 12px; letter-spacing: 0; text-transform: none; }
   h1 { font-size: 45px; }
   .control-panel { padding: 22px 17px; }
   .setup-grid { grid-template-columns: 1fr; }
@@ -377,3 +377,11 @@ footer p { margin: 0; font-size: 10px; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+.calendar-summary { margin: 18px 0 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: #53665b; font-size: 14px; line-height: 1.5; }
+.calendar-summary p { margin: 7px 0 0; }
+.calendar-summary b { display: block; margin-top: 10px; color: var(--green); font-size: 13px; }
+.calendar-error { color: #8a4435; font-size: 14px; line-height: 1.5; }
+.injection-card label { font-size: 12px; letter-spacing: .03em; text-transform: none; }
+.injection-card input, .injection-card select { font-size: 16px; }
+.injection-card .remove-button { width: 36px; height: 36px; }
