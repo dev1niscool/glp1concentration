@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { IntervalChart } from './interval-chart';
+import type { CalculatorInputs } from './saved-inputs';
 import {
   COMPOUNDS,
   DOSE_TIME_LABELS,
   findModeledInterval,
-  DEFAULT_INTERVAL_CEILING_OFFSET,
   INTERVAL_PROJECTION_WEEKS,
   latestCalendarDose,
   MAX_SEARCH_INTERVAL_DAYS,
@@ -25,21 +25,22 @@ function concentration(value: number) {
   return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
 
-export function IntervalCalculator({ regimens, model, startDate, needsPlot }: {
+export function IntervalCalculator({ regimens, model, startDate, needsPlot, inputs, onInputsChange }: {
   regimens: Regimen[];
   model: PkModelOptions;
   startDate: string;
   needsPlot: boolean;
+  inputs: CalculatorInputs;
+  onInputsChange: (inputs: CalculatorInputs) => void;
 }) {
   const latest = latestCalendarDose(regimens);
-  const [reference, setReference] = useState('');
-  const [ceilingOffset, setCeilingOffset] = useState(String(DEFAULT_INTERVAL_CEILING_OFFSET));
-  const [doseOverride, setDoseOverride] = useState<number | null>(null);
+  const { reference, ceilingOffset, doseOverride } = inputs;
   const [result, setResult] = useState<SearchResult | null>(null);
   const [progress, setProgress] = useState('');
   const [busy, setBusy] = useState(false);
   const run = useRef(0);
-  const doseMg = doseOverride ?? latest?.doseMg ?? 0;
+  const matchingOverride = latest && doseOverride?.compound === latest.compound ? doseOverride : null;
+  const doseMg = matchingOverride?.doseMg ?? latest?.doseMg ?? 0;
   const ceiling = Number(reference) + Number(ceilingOffset);
   const validOffset = ceilingOffset.trim() !== '' && Number.isFinite(Number(ceilingOffset)) && Number(ceilingOffset) >= 0;
   const validReference = reference.trim() !== '' && Number.isFinite(ceiling) && Number(reference) > 0 && validOffset;
@@ -91,16 +92,19 @@ export function IntervalCalculator({ regimens, model, startDate, needsPlot }: {
       <div className="interval-inputs">
         <label>Reference concentration (ng/mL)
           <span className="input-with-suffix"><input type="number" min="0.01" step="any" inputMode="decimal" placeholder="Enter reference" value={reference}
-            onChange={(event) => { clearResult(); setReference(event.target.value); }} /><small>ng/mL</small></span>
+            onChange={(event) => { clearResult(); onInputsChange({ ...inputs, reference: event.target.value }); }} /><small>ng/mL</small></span>
         </label>
         <label>Ceiling offset (ng/mL)
           <span className="input-with-suffix"><input type="number" min="0" step="any" inputMode="decimal" value={ceilingOffset}
             aria-invalid={!validOffset} aria-describedby="ceiling-offset-help"
-            onChange={(event) => { clearResult(); setCeilingOffset(event.target.value); }} /><small>ng/mL</small></span>
+            onChange={(event) => { clearResult(); onInputsChange({ ...inputs, ceilingOffset: event.target.value }); }} /><small>ng/mL</small></span>
         </label>
         <label className="interval-dose-field">Modeled dose per injection
-          <select value={doseMg} disabled={!latest} onChange={(event) => { clearResult(); setDoseOverride(Number(event.target.value)); }}>
-            {!latest && <option value={0}>Plot doses first</option>}
+          <select value={matchingOverride ? String(matchingOverride.doseMg) : 'latest'} disabled={!latest} onChange={(event) => {
+            clearResult();
+            onInputsChange({ ...inputs, doseOverride: event.target.value === 'latest' || !latest ? null : { compound: latest.compound, doseMg: Number(event.target.value) } });
+          }}>
+            <option value="latest">{latest ? `${latest.doseMg} mg · use latest entered dose` : 'Plot doses first'}</option>
             {latest && COMPOUNDS[latest.compound].doses.map((dose) => <option value={dose} key={dose}>{dose} mg</option>)}
           </select>
         </label>

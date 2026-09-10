@@ -9,6 +9,7 @@ import {
   regimenDoseHours,
   CompoundId,
   DOSE_TIME_LABELS,
+  DEFAULT_INTERVAL_CEILING_OFFSET,
   DoseTime,
   formatConcentration,
   niceScale,
@@ -22,9 +23,9 @@ import {
 } from './pk';
 import { SiteFooter, SiteHeader } from './site-chrome';
 import { IntervalCalculator } from './interval-calculator';
+import { clearSavedInputs, readSavedInputs, writeSavedInputs, type CalculatorInputs, type SavedInputs, type PlotterVariant } from './saved-inputs';
 
 type PlotMode = 'accumulate' | 'compare';
-type PlotterVariant = 'branded' | 'compounded' | 'custom-intervals';
 type MeasurementSystem = 'us' | 'metric';
 
 type BodySizeProfileForm = {
@@ -122,6 +123,10 @@ function defaultRegimens(variant: PlotterVariant): Regimen[] {
     useCustomDoseInterval: false,
     doseIntervalDays: 7,
   }];
+}
+
+function defaultCalculatorInputs(): CalculatorInputs {
+  return { reference: '', ceilingOffset: String(DEFAULT_INTERVAL_CEILING_OFFSET), doseOverride: null };
 }
 
 function dateAtHour(startDate: string, hour: number) {
@@ -748,6 +753,69 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const [modelMode, setModelMode] = useState<PkModelMode>('one-compartment');
   const [bodySizeProfile, setBodySizeProfile] = useState<BodySizeProfileForm>(DEFAULT_BODY_SIZE_PROFILE);
   const [plottedPkModel, setPlottedPkModel] = useState<PkModelOptions>({ kind: 'one-compartment' });
+  const [calculatorInputs, setCalculatorInputs] = useState<CalculatorInputs>(defaultCalculatorInputs);
+  const [storageReady, setStorageReady] = useState(false);
+  const [storageStatus, setStorageStatus] = useState<'ready' | 'restored' | 'saved' | 'cleared' | 'unavailable' | 'invalid'>('ready');
+  const savedSnapshot = useRef('');
+  const inputsToSave = useMemo<SavedInputs>(() => ({
+    configuredStartDate, durationInput, draftRegimens, doseBlocks, mode, modelMode, bodySizeProfile, calculatorInputs,
+  }), [configuredStartDate, durationInput, draftRegimens, doseBlocks, mode, modelMode, bodySizeProfile, calculatorInputs]);
+
+  useEffect(() => {
+    // Hydrate browser-owned inputs after SSR, before enabling the save effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStorageReady(true);
+    try {
+      const { inputs, invalid } = readSavedInputs(window.localStorage, variant);
+      if (!inputs) {
+        setStorageStatus(invalid ? 'invalid' : 'ready');
+        return;
+      }
+      savedSnapshot.current = JSON.stringify(inputs);
+      setStartDate(inputs.configuredStartDate);
+      setDurationInput(inputs.durationInput);
+      setDraftRegimens(inputs.draftRegimens);
+      setDoseBlocks(inputs.doseBlocks);
+      setMode(inputs.mode);
+      setModelMode(inputs.modelMode);
+      setBodySizeProfile(inputs.bodySizeProfile);
+      setCalculatorInputs(inputs.calculatorInputs);
+      const calendar = calendarBlockSchedule(inputs.doseBlocks);
+      const regimens = variant === 'custom-intervals' ? calendar.error === null ? calendar.regimens : [] : inputs.draftRegimens;
+      const firstHour = regimens.reduce((earliest, regimen) => Math.min(earliest, ...regimenDoseHours(regimen)), Infinity);
+      const model: PkModelOptions | null = inputs.modelMode === 'one-compartment' || regimens.some((regimen) => regimen.compound === 'retatrutide')
+        ? { kind: 'one-compartment' } : modelFromBodySizeForm(inputs.bodySizeProfile, Number.isFinite(firstHour) ? firstHour : 0);
+      setPlottedRegimens([]);
+      if (model && regimens.length > 0 && (variant === 'custom-intervals' || (inputs.configuredStartDate && inputs.durationInput))) {
+        setPlottedPkModel(model);
+        setPlottedRegimens(regimens);
+        if (variant === 'custom-intervals' && calendar.error === null) {
+          setPlottedCalendar({ startDate: calendar.startDate, totalWeeks: calendar.totalWeeks });
+        }
+      }
+      setStorageStatus('restored');
+    } catch {
+      setStorageStatus('unavailable');
+    }
+  }, [variant]);
+
+  useEffect(() => {
+    if (!storageReady) {
+      if (!savedSnapshot.current) savedSnapshot.current = JSON.stringify(inputsToSave);
+      return;
+    }
+    const snapshot = JSON.stringify(inputsToSave);
+    if (snapshot === savedSnapshot.current) return;
+    savedSnapshot.current = snapshot;
+    try {
+      writeSavedInputs(window.localStorage, variant, inputsToSave);
+      // The status reflects an external storage operation, not derived form state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStorageStatus('saved');
+    } catch {
+      setStorageStatus('unavailable');
+    }
+  }, [inputsToSave, storageReady, variant]);
   const totalWeeks = isCalendar ? plottedCalendar?.totalWeeks ?? null : durationInput === '' ? null : Number(durationInput);
   const startDate = isCalendar ? plottedCalendar?.startDate ?? '' : configuredStartDate;
   const hasDraftRetatrutide = draftRegimens.some((regimen) => regimen.compound === 'retatrutide');
@@ -839,9 +907,21 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
 
   function reset() {
     const defaults = defaultRegimens(variant);
-    setStartDate(todayInputValue());
+    const resetDate = todayInputValue();
+    const blocks = defaultDoseBlocks();
+    const calculator = defaultCalculatorInputs();
+    savedSnapshot.current = JSON.stringify({ configuredStartDate: resetDate, durationInput: '', draftRegimens: defaults,
+      doseBlocks: blocks, mode: 'accumulate', modelMode: 'one-compartment', bodySizeProfile: DEFAULT_BODY_SIZE_PROFILE, calculatorInputs: calculator });
+    try {
+      clearSavedInputs(window.localStorage, variant);
+      setStorageStatus('cleared');
+    } catch {
+      setStorageStatus('unavailable');
+    }
+    setCalculatorInputs(calculator);
+    setStartDate(resetDate);
     setDurationInput('');
-    setDoseBlocks(defaultDoseBlocks());
+    setDoseBlocks(blocks);
     setPlottedCalendar(null);
     setDraftRegimens(defaults);
     setPlottedRegimens(defaults);
@@ -882,6 +962,14 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             <span>01</span>
             <div><p>Build your regimen</p><small>{isCalendar ? 'Choose a dose, then add its injection dates' : variant === 'compounded' ? 'Add doses across your timeline' : 'Add weekly doses across your timeline'}</small></div>
           </div>
+          <p className="saved-inputs-note" role="status">
+            {storageStatus === 'unavailable' ? 'Browser storage is unavailable. You can still use the plotter, but inputs may not be saved or cleared.'
+              : storageStatus === 'invalid' ? 'Saved inputs could not be restored. New entries will replace them.'
+                : storageStatus === 'cleared' ? 'Saved inputs cleared for this tab.'
+                  : storageStatus === 'restored' ? 'Your saved inputs have been restored.'
+                    : storageStatus === 'saved' ? 'Inputs saved in this browser.' : 'Inputs save automatically in this browser.'}
+            <small>Saved inputs stay in this browser and are not sent to a server or synced across devices. Reset clears this tab’s saved inputs.</small>
+          </p>
 
           {isCalendar ? (
             <div className="calendar-summary" aria-live="polite">
@@ -1004,10 +1092,10 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             <div><p>Estimated concentration</p><h2>Plasma level over time</h2></div>
             <span className="unit-chip">ng / mL</span>
           </div>
-          {totalWeeks === null ? (
+          {totalWeeks === null || plottedRegimens.length === 0 ? (
             <div className="chart-empty" role="status">
               <span aria-hidden="true">↗</span>
-              <strong>{isCalendar ? 'Enter your injection dates to begin.' : 'Enter a graph duration to begin.'}</strong>
+              <strong>{plottedRegimens.length === 0 && !isCalendar ? 'Complete your inputs and plot to begin.' : isCalendar ? 'Enter your injection dates to begin.' : 'Enter a graph duration to begin.'}</strong>
               <p>{isCalendar ? 'Choose a dose and add its dates in each block, then select Plot concentration. Your graph duration is calculated automatically.' : 'Choose any whole number of weeks, then plot your concentration estimate.'}</p>
             </div>
           ) : (
@@ -1030,6 +1118,8 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             model={plottedPkModel}
             startDate={startDate}
             needsPlot={calculatorNeedsPlot}
+            inputs={calculatorInputs}
+            onInputsChange={setCalculatorInputs}
           />}
           {variant === 'compounded' && (
             <aside className="compounded-disclaimer" role="note">
