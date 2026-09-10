@@ -80,12 +80,30 @@ test('interval search carries existing exposure and the changing body-size model
   assert.equal(result.peakNgMl, Math.ceil(measuredPeak * 10) / 10);
 });
 
+test('editable ceiling offsets support zero and decimals and change the numeric search ceiling', async () => {
+  const model = { kind: 'one-compartment' };
+  const zero = await findModeledInterval(intervalHistory.regimens, 5, 609, model, 0);
+  const decimal = await findModeledInterval(intervalHistory.regimens, 5, 609, model, 12.5);
+  const wider = await findModeledInterval(intervalHistory.regimens, 5, 609, model, 80);
+  for (const [result, ceiling] of [[zero, 609], [decimal, 621.5], [wider, 689]]) {
+    assert.equal(result.status, 'match');
+    assert.equal(result.ceilingNgMl, ceiling);
+    assert.ok(result.peakNgMl <= ceiling);
+  }
+  assert.ok(wider.intervalDays < zero.intervalDays);
+  const equivalent = await findModeledInterval(intervalHistory.regimens, 5, 589, model);
+  assert.deepEqual(equivalent, zero);
+  for (const offset of [-1, NaN, Infinity]) {
+    assert.equal((await findModeledInterval(intervalHistory.regimens, 5, 609, model, offset)).status, 'invalid');
+  }
+});
+
 test('interval search reports no modeled match and supports cancellation', async () => {
   const result = await findModeledInterval(intervalHistory.regimens, 5, 1, { kind: 'one-compartment' });
   assert.equal(result.status, 'no-match');
   assert.ok(result.lowestPeakNgMl > result.ceilingNgMl);
   let checkpoints = 0;
-  const cancelled = await findModeledInterval(intervalHistory.regimens, 5, 609, { kind: 'one-compartment' }, async () => ++checkpoints < 4);
+  const cancelled = await findModeledInterval(intervalHistory.regimens, 5, 609, { kind: 'one-compartment' }, 20, async () => ++checkpoints < 4);
   assert.equal(cancelled.status, 'cancelled');
   assert.equal(checkpoints, 4);
 });

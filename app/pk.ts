@@ -478,7 +478,7 @@ export function sampleRegimen(
   return samples;
 }
 
-export const INTERVAL_REFERENCE_ALLOWANCE = 20;
+export const DEFAULT_INTERVAL_CEILING_OFFSET = 20;
 export const INTERVAL_PROJECTION_WEEKS = 52;
 export const MAX_SEARCH_INTERVAL_DAYS = 365;
 
@@ -504,6 +504,7 @@ export async function findModeledInterval(
   doseMg: number,
   referenceNgMl: number,
   model: PkModelOptions,
+  ceilingOffsetNgMl = DEFAULT_INTERVAL_CEILING_OFFSET,
   checkpoint: (message: string) => Promise<boolean> = async () => true,
 ): Promise<IntervalSearchResult> {
   const latest = latestCalendarDose(regimens);
@@ -518,8 +519,11 @@ export async function findModeledInterval(
     return { status: 'invalid', message: 'This calculator requires a schedule containing only semaglutide or only tirzepatide. Concentrations of different medications cannot define one shared target.' };
   }
   if (latest.ambiguous) return { status: 'invalid', message: 'The latest injection time appears in multiple blocks. Resolve that overlap before calculating.' };
-  if (!Number.isFinite(referenceNgMl) || referenceNgMl <= 0 || !Number.isFinite(referenceNgMl + INTERVAL_REFERENCE_ALLOWANCE)) {
+  if (!Number.isFinite(referenceNgMl) || referenceNgMl <= 0) {
     return { status: 'invalid', message: 'Enter a positive reference concentration in ng/mL.' };
+  }
+  if (!Number.isFinite(ceilingOffsetNgMl) || ceilingOffsetNgMl < 0 || !Number.isFinite(referenceNgMl + ceilingOffsetNgMl)) {
+    return { status: 'invalid', message: 'Enter a ceiling offset of zero or more ng/mL that produces a finite ceiling.' };
   }
   if (!COMPOUNDS[latest.compound].doses.includes(doseMg)) {
     return { status: 'invalid', message: 'Select a dose for the modeled medication.' };
@@ -530,7 +534,7 @@ export async function findModeledInterval(
     !['female', 'male'].includes(model.sex) || !Number.isFinite(model.firstDoseHour)
   )) return { status: 'invalid', message: 'Complete valid two-compartment body-size inputs before calculating.' };
 
-  const ceilingNgMl = referenceNgMl + INTERVAL_REFERENCE_ALLOWANCE;
+  const ceilingNgMl = referenceNgMl + ceilingOffsetNgMl;
   const repeatHours = INTERVAL_PROJECTION_WEEKS * HOURS_PER_WEEK;
   const followupHours = Math.ceil(COMPOUNDS[latest.compound].halfLifeDays * 10 * 24 / 6) * 6;
   const longestHour = latest.hour + MAX_SEARCH_INTERVAL_DAYS * 24 + repeatHours + followupHours;

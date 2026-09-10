@@ -5,7 +5,7 @@ import {
   COMPOUNDS,
   DOSE_TIME_LABELS,
   findModeledInterval,
-  INTERVAL_REFERENCE_ALLOWANCE,
+  DEFAULT_INTERVAL_CEILING_OFFSET,
   INTERVAL_PROJECTION_WEEKS,
   latestCalendarDose,
   MAX_SEARCH_INTERVAL_DAYS,
@@ -32,14 +32,16 @@ export function IntervalCalculator({ regimens, model, startDate, needsPlot }: {
 }) {
   const latest = latestCalendarDose(regimens);
   const [reference, setReference] = useState('');
+  const [ceilingOffset, setCeilingOffset] = useState(String(DEFAULT_INTERVAL_CEILING_OFFSET));
   const [doseOverride, setDoseOverride] = useState<number | null>(null);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [progress, setProgress] = useState('');
   const [busy, setBusy] = useState(false);
   const run = useRef(0);
   const doseMg = doseOverride ?? latest?.doseMg ?? 0;
-  const ceiling = Number(reference) + INTERVAL_REFERENCE_ALLOWANCE;
-  const validReference = reference.trim() !== '' && Number.isFinite(ceiling) && Number(reference) > 0;
+  const ceiling = Number(reference) + Number(ceilingOffset);
+  const validOffset = ceilingOffset.trim() !== '' && Number.isFinite(Number(ceilingOffset)) && Number(ceilingOffset) >= 0;
+  const validReference = reference.trim() !== '' && Number.isFinite(ceiling) && Number(reference) > 0 && validOffset;
   const mixed = new Set(regimens.map((regimen) => regimen.compound)).size > 1;
   const unavailable = !latest || needsPlot || mixed || latest.ambiguous;
 
@@ -59,7 +61,7 @@ export function IntervalCalculator({ regimens, model, startDate, needsPlot }: {
     setBusy(true);
     setProgress('Preparing the modeled continuation…');
     try {
-      const next = await findModeledInterval(regimens, doseMg, Number(reference), model, async (message) => {
+      const next = await findModeledInterval(regimens, doseMg, Number(reference), model, Number(ceilingOffset), async (message) => {
         if (run.current !== currentRun) return false;
         setProgress(message);
         await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
@@ -79,7 +81,7 @@ export function IntervalCalculator({ regimens, model, startDate, needsPlot }: {
       <p className="eyebrow">Explore a modeled continuation</p>
       <h2 id="interval-calculator-title">Interval calculator</h2>
       <p className="interval-intro">Compare repeated-dose peaks with a concentration you enter. The dose starts with your most recent dated injection and can be changed below.</p>
-      <p className="interval-limit"><strong>A model match is not a dosing recommendation.</strong> These are estimated concentrations, not measured blood levels. Feeling better near a plotted value does not establish a personal tolerability limit. The extra 20 ng/mL is a comparison allowance, not a safety margin. Review medication timing and side effects with your prescriber.</p>
+      <p className="interval-limit"><strong>A model match is not a dosing recommendation.</strong> These are estimated concentrations, not measured blood levels. Feeling better near a plotted value does not establish a personal tolerability limit. The ceiling offset is a comparison allowance, not a safety margin. Review medication timing and side effects with your prescriber.</p>
       {!latest || needsPlot ? <p className="calendar-error" role="status">Plot your completed dates and model inputs first. The calculator uses the last plotted schedule.</p>
         : mixed ? <p className="calendar-error" role="status">Use a schedule containing one medication. Summed concentrations of different medications cannot define a shared target.</p>
           : latest.ambiguous ? <p className="calendar-error" role="status">The latest injection time appears in more than one block. Resolve that overlap and replot before calculating.</p> : (
@@ -90,14 +92,21 @@ export function IntervalCalculator({ regimens, model, startDate, needsPlot }: {
           <span className="input-with-suffix"><input type="number" min="0.01" step="any" inputMode="decimal" placeholder="Enter reference" value={reference}
             onChange={(event) => { clearResult(); setReference(event.target.value); }} /><small>ng/mL</small></span>
         </label>
-        <label>Modeled dose per injection
+        <label>Ceiling offset (ng/mL)
+          <span className="input-with-suffix"><input type="number" min="0" step="any" inputMode="decimal" value={ceilingOffset}
+            aria-invalid={!validOffset} aria-describedby="ceiling-offset-help"
+            onChange={(event) => { clearResult(); setCeilingOffset(event.target.value); }} /><small>ng/mL</small></span>
+        </label>
+        <label className="interval-dose-field">Modeled dose per injection
           <select value={doseMg} disabled={!latest} onChange={(event) => { clearResult(); setDoseOverride(Number(event.target.value)); }}>
             {!latest && <option value={0}>Plot doses first</option>}
             {latest && COMPOUNDS[latest.compound].doses.map((dose) => <option value={dose} key={dose}>{dose} mg</option>)}
           </select>
         </label>
       </div>
-      {validReference && <p className="interval-ceiling">Numeric comparison ceiling: <strong>{concentration(ceiling)} ng/mL</strong> ({concentration(Number(reference))} + {INTERVAL_REFERENCE_ALLOWANCE}).</p>}
+      <p id="ceiling-offset-help">The offset starts at +20 ng/mL. Enter zero or any positive value.</p>
+      {!validOffset && <p className="calendar-error" role="status">Enter a ceiling offset of zero or more ng/mL.</p>}
+      {validReference && <p className="interval-ceiling">Numeric comparison ceiling: <strong>{concentration(ceiling)} ng/mL</strong> ({concentration(Number(reference))} + {concentration(Number(ceilingOffset))}).</p>}
       <div className="button-row">
         <button className="primary" type="button" disabled={unavailable || !validReference || (busy && !needsPlot)} onClick={calculate}>Estimate modeled interval <span aria-hidden="true">↗</span></button>
         {busy && !needsPlot && <button className="reset-button" type="button" onClick={clearResult}>Cancel</button>}
