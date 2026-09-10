@@ -328,7 +328,7 @@ export default function MethodologyPage() {
 
       <section className="method-block" id="variable-dates">
         <div className="method-block-title"><span>04</span><div><p className="eyebrow">Variable injection dates</p><h2>Entered history, then a modeled continuation.</h2></div></div>
-        <div className="method-copy">
+        <div className="method-copy method-prose">
           <p className="method-lede">The <Link href="/custom-intervals">Variable injection dates tab</Link> supports multiple dates within each dose block and an optional interval calculator. It uses the same semaglutide and tirzepatide models described above.</p>
           <h3>Dose blocks and calendar dates</h3>
           <p>Choose a peptide, dose per injection, and Morning, Afternoon, or Night once per block, then add as many dates as needed. Add a block when the dose or time changes. Dates can be entered in any order. Up to 100 injections are supported, with the full main graph limited to 520 weeks. Empty or invalid dates and duplicate dates within a block must be resolved before plotting.</p>

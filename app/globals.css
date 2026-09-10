@@ -291,8 +291,9 @@ input:hover, select:hover { border-color: #9aaa9e; }
 .parameter-notes article { padding: 25px 27px 3px 0; }
 .parameter-notes article + article { padding-left: 27px; border-left: 1px solid #bdc9be; }
 .parameter-notes article > span { display: inline-grid; place-items: center; width: 45px; height: 22px; border-radius: 100px; background: var(--ink); color: var(--lime); font-size: 8px; font-weight: 800; letter-spacing: .08em; }
-.parameter-notes h3 { margin: 25px 0 11px; font: 400 23px Georgia, serif; }
-.parameter-notes p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.72; }
+.parameter-notes h3, .method-prose > h3 { margin: 25px 0 11px; font: 400 23px Georgia, serif; }
+.parameter-notes p, .method-prose > p:not(.method-lede) { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.72; }
+.method-prose > p + p { margin-top: 12px; }
 .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #cbd5cb; border: 1px solid #cbd5cb; }
 .check-grid article { min-height: 225px; padding: 25px; background: #f6f8f1; }
 .check-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--lime); color: var(--green); font-size: 12px; font-weight: 900; }
