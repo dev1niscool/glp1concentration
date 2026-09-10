@@ -21,6 +21,7 @@ import {
   trapezoidAuc,
 } from './pk';
 import { SiteFooter, SiteHeader } from './site-chrome';
+import { IntervalCalculator } from './interval-calculator';
 
 type PlotMode = 'accumulate' | 'compare';
 type PlotterVariant = 'branded' | 'compounded' | 'custom-intervals';
@@ -766,6 +767,10 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
     [bodySizeProfile, firstDraftTwoCompartmentDoseHour, hasDraftRetatrutide, modelMode],
   );
   const bodySizeProfileValid = draftPkModel !== null;
+  const calculatorNeedsPlot = !plottedCalendar || draftCalendar.error !== null ||
+    draftCalendar.startDate !== plottedCalendar.startDate ||
+    JSON.stringify(draftCalendar.regimens) !== JSON.stringify(plottedRegimens) ||
+    JSON.stringify(draftPkModel) !== JSON.stringify(plottedPkModel);
 
   const samples = useMemo(
     () => totalWeeks === null
@@ -1019,6 +1024,13 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             </>
           )}
           {isCalendar && <p className="calendar-summary">This population-model estimate describes the schedule you enter; it does not establish safety. Do not use the graph to start, stop, combine, or change medication.</p>}
+          {isCalendar && <IntervalCalculator
+            key={JSON.stringify([plottedRegimens, plottedPkModel, startDate, calculatorNeedsPlot])}
+            regimens={plottedCalendar ? plottedRegimens : []}
+            model={plottedPkModel}
+            startDate={startDate}
+            needsPlot={calculatorNeedsPlot}
+          />}
           {variant === 'compounded' && (
             <aside className="compounded-disclaimer" role="note">
               <strong>How to read this estimate</strong>

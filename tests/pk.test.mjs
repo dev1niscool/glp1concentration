@@ -4,6 +4,8 @@ import {
   COMPOUNDS,
   calendarSchedule,
   calendarBlockSchedule,
+  findModeledInterval,
+  latestCalendarDose,
   DOSE_TIME_LABELS,
   doseConcentrationNgMl,
   modeledWeightAtHour,
@@ -23,6 +25,85 @@ const customBlocks = [
   { id: 2, compound: 'tirzepatide', doseMg: 5, dates: ['2026-08-25'], timeOfDay: 'morning' },
   { id: 3, compound: 'tirzepatide', doseMg: 2.5, dates: ['2026-09-01', '2026-09-03'], timeOfDay: 'morning' },
 ];
+
+const intervalHistory = calendarBlockSchedule([
+  { id: 1, compound: 'tirzepatide', doseMg: 2.5, dates: ['2026-08-11', '2026-08-18', '2026-08-25'], timeOfDay: 'night' },
+  { id: 2, compound: 'tirzepatide', doseMg: 5, dates: ['2026-08-31', '2026-09-07'], timeOfDay: 'night' },
+]);
+
+test('interval dose default follows chronological injection time rather than block order', () => {
+  assert.equal(latestCalendarDose([...intervalHistory.regimens].reverse()).doseMg, 5);
+  assert.equal(latestCalendarDose(intervalHistory.regimens).hour, 666);
+  assert.equal(latestCalendarDose([]), null);
+  assert.equal(latestCalendarDose([...intervalHistory.regimens, intervalHistory.regimens[1]]).ambiguous, true);
+});
+
+test('interval search includes accumulation and matches an independent steady-state peak calculation', async () => {
+  const result = await findModeledInterval(intervalHistory.regimens, 5, 609, { kind: 'one-compartment' });
+  assert.equal(result.status, 'match');
+  assert.equal(result.ceilingNgMl, 629);
+  assert.equal(result.intervalDays, 8);
+  const { absorptionRatePerHour: ka, halfLifeDays, apparentVolumeLiters: volume } = COMPOUNDS.tirzepatide;
+  const ke = Math.log(2) / (halfLifeDays * 24);
+  const steadyPeak = (days) => {
+    const tau = days * 24;
+    const phase = Math.log(ka * (1 - Math.exp(-ke * tau)) / (ke * (1 - Math.exp(-ka * tau)))) / (ka - ke);
+    return (5 * 1000 * ka / (volume * (ka - ke))) *
+      (Math.exp(-ke * phase) / (1 - Math.exp(-ke * tau)) - Math.exp(-ka * phase) / (1 - Math.exp(-ka * tau)));
+  };
+  assert.ok(steadyPeak(7) > result.ceilingNgMl);
+  assert.ok(steadyPeak(8) < result.ceilingNgMl);
+  assert.ok(Math.abs(result.peakNgMl - steadyPeak(8)) < 0.2);
+  assert.equal(result.firstFutureHour, 666 + 8 * 24);
+  assert.ok(result.endHour > result.firstFutureHour + 52 * 168);
+  const smallerDose = await findModeledInterval(intervalHistory.regimens, 2.5, 609, { kind: 'one-compartment' });
+  assert.equal(smallerDose.status, 'match');
+  assert.equal(smallerDose.doseMg, 2.5);
+  assert.ok(smallerDose.intervalDays < result.intervalDays);
+});
+
+test('interval search carries existing exposure and the changing body-size model forward', async () => {
+  const model = { kind: 'personalized-two-compartment', startingWeightKg: 100, heightCm: 175, sex: 'male', firstDoseHour: intervalHistory.firstDoseHour };
+  const result = await findModeledInterval(intervalHistory.regimens, 5, 609, model);
+  assert.equal(result.status, 'match');
+  assert.ok(result.peakNgMl <= 629);
+  assert.ok(result.existingDosePeakNgMl > 629);
+  assert.ok(result.peakHour > result.firstFutureHour + 26 * 168);
+  const futureHours = [];
+  for (let hour = result.firstFutureHour; hour < result.firstFutureHour + 52 * 168; hour += result.intervalDays * 24) futureHours.push(hour);
+  const future = { ...intervalHistory.regimens[1], explicitDoseHours: futureHours };
+  const combined = [...intervalHistory.regimens, future].map((regimen) => sampleRegimen(regimen, result.endHour / 168, 0.25, model));
+  let measuredPeak = 0;
+  for (let index = result.firstFutureHour * 4; index < combined[0].length; index++) {
+    measuredPeak = Math.max(measuredPeak, combined.reduce((sum, series) => sum + series[index], 0));
+  }
+  assert.equal(result.peakNgMl, Math.ceil(measuredPeak * 10) / 10);
+});
+
+test('interval search reports no modeled match and supports cancellation', async () => {
+  const result = await findModeledInterval(intervalHistory.regimens, 5, 1, { kind: 'one-compartment' });
+  assert.equal(result.status, 'no-match');
+  assert.ok(result.lowestPeakNgMl > result.ceilingNgMl);
+  let checkpoints = 0;
+  const cancelled = await findModeledInterval(intervalHistory.regimens, 5, 609, { kind: 'one-compartment' }, async () => ++checkpoints < 4);
+  assert.equal(cancelled.status, 'cancelled');
+  assert.equal(checkpoints, 4);
+});
+
+test('interval calculator rejects incomplete inputs, mixed drugs, and ambiguous latest doses', async () => {
+  for (const [regimens, dose, reference] of [
+    [[], 5, 609], [intervalHistory.regimens, 5, 0], [intervalHistory.regimens, 5, NaN],
+    [intervalHistory.regimens, 5, Infinity], [intervalHistory.regimens, 100, 609],
+    [[...intervalHistory.regimens, { ...intervalHistory.regimens[0], compound: 'semaglutide' }], 5, 609],
+    [[...intervalHistory.regimens, intervalHistory.regimens[1]], 5, 609],
+    [[{ ...intervalHistory.regimens[0], explicitDoseHours: [NaN] }], 5, 609],
+  ]) {
+    assert.equal((await findModeledInterval(regimens, dose, reference, { kind: 'one-compartment' })).status, 'invalid');
+  }
+  assert.equal((await findModeledInterval(intervalHistory.regimens, 5, 609, {
+    kind: 'personalized-two-compartment', startingWeightKg: NaN, heightCm: 175, sex: 'male', firstDoseHour: 18,
+  })).status, 'invalid');
+});
 
 test('multiple dates per block preserve all five example doses and both model outputs', () => {
   const grouped = calendarBlockSchedule(customBlocks);

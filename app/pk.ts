@@ -478,6 +478,118 @@ export function sampleRegimen(
   return samples;
 }
 
+export const INTERVAL_REFERENCE_ALLOWANCE = 20;
+export const INTERVAL_PROJECTION_WEEKS = 52;
+export const MAX_SEARCH_INTERVAL_DAYS = 365;
+
+export function latestCalendarDose(regimens: Regimen[]) {
+  const doses = regimens.flatMap((regimen) => (regimen.explicitDoseHours ?? [])
+    .map((hour) => ({ compound: regimen.compound, doseMg: regimen.doseMg, timeOfDay: regimen.timeOfDay, hour })));
+  doses.sort((a, b) => b.hour - a.hour);
+  if (!doses.length) return null;
+  return { ...doses[0], ambiguous: doses.length > 1 && doses[1].hour === doses[0].hour };
+}
+
+type IntervalSearchResult =
+  | { status: 'invalid'; message: string }
+  | { status: 'cancelled' }
+  | { status: 'no-match'; ceilingNgMl: number; lowestPeakNgMl: number }
+  | { status: 'match'; intervalDays: number; doseMg: number; compound: CompoundId;
+      ceilingNgMl: number; peakNgMl: number; peakHour: number;
+      existingDosePeakNgMl: number; firstFutureHour: number; endHour: number };
+
+/** Numerical scenario search only; a reference concentration is not a clinical target. */
+export async function findModeledInterval(
+  regimens: Regimen[],
+  doseMg: number,
+  referenceNgMl: number,
+  model: PkModelOptions,
+  checkpoint: (message: string) => Promise<boolean> = async () => true,
+): Promise<IntervalSearchResult> {
+  const latest = latestCalendarDose(regimens);
+  if (!latest || regimens.some((regimen) => !regimen.explicitDoseHours?.length)) {
+    return { status: 'invalid', message: 'Plot a dated dose schedule before calculating.' };
+  }
+  if (regimens.some((regimen) => !Number.isFinite(regimen.doseMg) || regimen.doseMg <= 0 ||
+    regimen.explicitDoseHours!.some((hour) => !Number.isInteger(hour) || hour < 0 || hour > 520 * HOURS_PER_WEEK))) {
+    return { status: 'invalid', message: 'The plotted schedule contains invalid doses or times. Check the entries and replot.' };
+  }
+  if (new Set(regimens.map((regimen) => regimen.compound)).size !== 1 || latest.compound === 'retatrutide') {
+    return { status: 'invalid', message: 'This calculator requires a schedule containing only semaglutide or only tirzepatide. Concentrations of different medications cannot define one shared target.' };
+  }
+  if (latest.ambiguous) return { status: 'invalid', message: 'The latest injection time appears in multiple blocks. Resolve that overlap before calculating.' };
+  if (!Number.isFinite(referenceNgMl) || referenceNgMl <= 0 || !Number.isFinite(referenceNgMl + INTERVAL_REFERENCE_ALLOWANCE)) {
+    return { status: 'invalid', message: 'Enter a positive reference concentration in ng/mL.' };
+  }
+  if (!COMPOUNDS[latest.compound].doses.includes(doseMg)) {
+    return { status: 'invalid', message: 'Select a dose for the modeled medication.' };
+  }
+  if (model.kind === 'personalized-two-compartment' && (
+    !Number.isFinite(model.startingWeightKg) || model.startingWeightKg < 30 || model.startingWeightKg > 350 ||
+    !Number.isFinite(model.heightCm) || model.heightCm < 120 || model.heightCm > 230 ||
+    !['female', 'male'].includes(model.sex) || !Number.isFinite(model.firstDoseHour)
+  )) return { status: 'invalid', message: 'Complete valid two-compartment body-size inputs before calculating.' };
+
+  const ceilingNgMl = referenceNgMl + INTERVAL_REFERENCE_ALLOWANCE;
+  const repeatHours = INTERVAL_PROJECTION_WEEKS * HOURS_PER_WEEK;
+  const followupHours = Math.ceil(COMPOUNDS[latest.compound].halfLifeDays * 10 * 24 / 6) * 6;
+  const longestHour = latest.hour + MAX_SEARCH_INTERVAL_DAYS * 24 + repeatHours + followupHours;
+  const history = new Map<number, number[]>();
+  async function historyAt(step: number) {
+    const cached = history.get(step);
+    if (cached) return cached;
+    const total = Array(Math.round(longestHour / step) + 1).fill(0) as number[];
+    for (const regimen of regimens) {
+      if (!await checkpoint('Calculating remaining concentration from the plotted doses…')) return null;
+      const samples = sampleRegimen(regimen, longestHour / HOURS_PER_WEEK, step, model);
+      samples.forEach((value, index) => { total[index] += value; });
+    }
+    history.set(step, total);
+    return total;
+  }
+  async function evaluate(intervalDays: number, step: number) {
+    const remaining = await historyAt(step);
+    if (!remaining) return null;
+    const firstFutureHour = latest!.hour + intervalDays * 24;
+    const endHour = firstFutureHour + repeatHours + followupHours;
+    const doseHours: number[] = [];
+    for (let hour = firstFutureHour; hour < firstFutureHour + repeatHours; hour += intervalDays * 24) doseHours.push(hour);
+    const future: Regimen = { ...regimens[0], doseMg, explicitDoseHours: doseHours };
+    const values = sampleRegimen(future, endHour / HOURS_PER_WEEK, step, model);
+    let peakNgMl = 0;
+    let peakHour = firstFutureHour;
+    let existingDosePeakNgMl = 0;
+    for (let index = Math.round(latest!.hour / step); index < Math.round(firstFutureHour / step); index++) {
+      existingDosePeakNgMl = Math.max(existingDosePeakNgMl, remaining[index]);
+    }
+    for (let index = Math.round(firstFutureHour / step); index < values.length; index++) {
+      const total = remaining[index] + values[index];
+      if (!Number.isFinite(total)) throw new Error('The projection produced a non-finite concentration.');
+      if (total > peakNgMl) { peakNgMl = total; peakHour = index * step; }
+    }
+    return { peakNgMl, peakHour, existingDosePeakNgMl, firstFutureHour, endHour };
+  }
+
+  let lowestPeakNgMl = Number.POSITIVE_INFINITY;
+  for (let intervalDays = 1; intervalDays <= MAX_SEARCH_INTERVAL_DAYS; intervalDays++) {
+    if (!await checkpoint(`Checking a ${intervalDays}-day modeled interval…`)) return { status: 'cancelled' };
+    const coarse = await evaluate(intervalDays, 1);
+    if (!coarse) return { status: 'cancelled' };
+    lowestPeakNgMl = Math.min(lowestPeakNgMl, coarse.peakNgMl);
+    if (coarse.peakNgMl > ceilingNgMl) continue;
+    if (!await checkpoint('Refining the candidate peak at 15-minute intervals…')) return { status: 'cancelled' };
+    const refined = await evaluate(intervalDays, 0.25);
+    if (!refined) return { status: 'cancelled' };
+    // Round upward for the numerical comparison and result display.
+    const peakNgMl = Math.ceil(refined.peakNgMl * 10) / 10;
+    if (peakNgMl <= ceilingNgMl) {
+      return { status: 'match', intervalDays, doseMg, compound: latest.compound,
+        ceilingNgMl, ...refined, peakNgMl };
+    }
+  }
+  return { status: 'no-match', ceilingNgMl, lowestPeakNgMl };
+}
+
 export function trapezoidAuc(values: number[], stepHours = 6): number {
   let auc = 0;
   for (let i = 1; i < values.length; i += 1) {
