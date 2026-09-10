@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   COMPOUNDS,
-  CalendarInjection,
-  calendarSchedule,
+  CalendarDoseBlock,
+  calendarBlockSchedule,
   regimenDoseHours,
   CompoundId,
   DOSE_TIME_LABELS,
@@ -253,10 +253,10 @@ function EstimateChart({
       return {
         id: String(regimen.id),
         label: regimen.explicitDoseHours
-          ? `${profile.name} · ${regimen.doseMg} mg · ${shortDate(dateAtHour(startDate, regimen.explicitDoseHours[0]))}`
+          ? `${profile.name} · ${regimen.doseMg} mg · block ${index + 1}`
           : profile.name,
         detail: regimen.explicitDoseHours
-          ? `${regimen.doseMg} mg · ${longDate(dateAtHour(startDate, regimen.explicitDoseHours[0]))} · ${DOSE_TIME_LABELS[regimen.timeOfDay]} · ${modelDetail(regimen.compound, pkModel)}`
+          ? `${regimen.doseMg} mg · ${regimen.explicitDoseHours.map((hour) => longDate(dateAtHour(startDate, hour))).join('; ')} · ${DOSE_TIME_LABELS[regimen.timeOfDay]} · ${modelDetail(regimen.compound, pkModel)}`
           : `${regimen.doseMg} mg · weeks ${regimen.startWeek}–${regimen.endWeek} · ${DOSE_TIME_LABELS[regimen.timeOfDay]} · every ${regimen.useCustomDoseInterval ? regimen.doseIntervalDays : 7} days · ${modelDetail(regimen.compound, pkModel)}`,
         color,
         values: sampleRegimen(regimen, totalWeeks, STEP_HOURS, pkModel),
@@ -273,7 +273,9 @@ function EstimateChart({
     return [{
       id: 'combined',
       label: 'Combined estimate',
-      detail: `${individualSeries.length} ${regimens[0]?.explicitDoseHours ? 'scheduled injections' : 'active regimens'}`,
+      detail: regimens[0]?.explicitDoseHours
+        ? `${regimens.reduce((count, regimen) => count + (regimen.explicitDoseHours?.length ?? 0), 0)} injections across ${regimens.length} dose blocks`
+        : `${individualSeries.length} active regimens`,
       color: '#174c38',
       values: total,
     }];
@@ -668,32 +670,30 @@ function CompoundCard({
   );
 }
 
-function defaultInjections(): CalendarInjection[] {
-  return [{ id: 1, compound: 'semaglutide', doseMg: 0.25, date: '', timeOfDay: 'morning' }];
+function defaultDoseBlocks(): CalendarDoseBlock[] {
+  return [{ id: 1, compound: 'semaglutide', doseMg: 0.25, dates: [''], timeOfDay: 'morning' }];
 }
 
-function InjectionCard({ injection, index, removable, onChange, onRemove }: {
-  injection: CalendarInjection;
+function DoseBlockCard({ block, index, removable, canAddDate, onChange, onRemove }: {
+  block: CalendarDoseBlock;
   index: number;
   removable: boolean;
-  onChange: (next: CalendarInjection) => void;
+  canAddDate: boolean;
+  onChange: (next: CalendarDoseBlock) => void;
   onRemove: () => void;
 }) {
-  const update = (partial: Partial<CalendarInjection>) => onChange({ ...injection, ...partial });
+  const update = (partial: Partial<CalendarDoseBlock>) => onChange({ ...block, ...partial });
   return (
     <fieldset className="dose-card injection-card">
-      <legend className="sr-only">Injection {index + 1}</legend>
+      <legend className="sr-only">Dose block {index + 1}</legend>
       <div className="dose-card-head">
         <span className="dose-number">{index + 1}</span>
-        <div><strong>Injection {index + 1}</strong><small>{COMPOUNDS[injection.compound].name} · {injection.doseMg} mg</small></div>
-        {removable && <button className="remove-button" type="button" onClick={onRemove} aria-label={`Remove injection ${index + 1}`}>×</button>}
+        <div><strong>{COMPOUNDS[block.compound].name} · {block.doseMg} mg</strong><small>Dose block {index + 1}</small></div>
+        {removable && <button className="remove-button" type="button" onClick={onRemove} aria-label={`Remove dose block ${index + 1}`}>×</button>}
       </div>
-      <label>Injection date
-        <input type="date" required min="0001-01-01" max="9999-12-24" value={injection.date} onChange={(event) => update({ date: event.target.value })} />
-      </label>
       <label>Peptide
-        <select value={injection.compound} onChange={(event) => {
-          const compound = event.target.value as CalendarInjection['compound'];
+        <select value={block.compound} onChange={(event) => {
+          const compound = event.target.value as CalendarDoseBlock['compound'];
           update({ compound, doseMg: COMPOUNDS[compound].doses[0] });
         }}>
           {BRANDED_COMPOUNDS.map((compound) => <option key={compound} value={compound}>{COMPOUNDS[compound].name} · {COMPOUNDS[compound].brands}</option>)}
@@ -701,15 +701,32 @@ function InjectionCard({ injection, index, removable, onChange, onRemove }: {
       </label>
       <div className="compound-grid">
         <label>Dose per injection
-          <select value={injection.doseMg} onChange={(event) => update({ doseMg: Number(event.target.value) })}>
-            {COMPOUNDS[injection.compound].doses.map((dose) => <option key={dose} value={dose}>{dose} mg</option>)}
+          <select value={block.doseMg} onChange={(event) => update({ doseMg: Number(event.target.value) })}>
+            {COMPOUNDS[block.compound].doses.map((dose) => <option key={dose} value={dose}>{dose} mg</option>)}
           </select>
         </label>
         <label>Dose time
-          <select value={injection.timeOfDay} onChange={(event) => update({ timeOfDay: event.target.value as DoseTime })}>
+          <select value={block.timeOfDay} onChange={(event) => update({ timeOfDay: event.target.value as DoseTime })}>
             {Object.entries(DOSE_TIME_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
+      </div>
+      <div className="injection-dates" role="group" aria-label={`Injection dates for dose block ${index + 1}`}>
+        <p>Injection dates</p>
+        <small>Use the dose and time above on every date below.</small>
+        {block.dates.map((date, dateIndex) => (
+          <div className="injection-date-row" key={dateIndex}>
+            <label>Date {dateIndex + 1}
+              <input type="date" required min="0001-01-01" max="9999-12-24" value={date}
+                onChange={(event) => update({ dates: block.dates.map((value, currentIndex) => currentIndex === dateIndex ? event.target.value : value) })} />
+            </label>
+            {block.dates.length > 1 && <button className="remove-button" type="button"
+              onClick={() => update({ dates: block.dates.filter((_, currentIndex) => currentIndex !== dateIndex) })}
+              aria-label={`Remove date ${dateIndex + 1} from dose block ${index + 1}`}>×</button>}
+          </div>
+        ))}
+        <button className="add-button add-date-button" type="button" disabled={!canAddDate}
+          onClick={() => update({ dates: [...block.dates, ''] })}><span aria-hidden="true">+</span> Add another date</button>
       </div>
     </fieldset>
   );
@@ -718,8 +735,9 @@ function InjectionCard({ injection, index, removable, onChange, onRemove }: {
 export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const isCalendar = variant === 'custom-intervals';
   const [configuredStartDate, setStartDate] = useState(todayInputValue);
-  const [injections, setInjections] = useState<CalendarInjection[]>(defaultInjections);
-  const draftCalendar = useMemo(() => calendarSchedule(injections), [injections]);
+  const [doseBlocks, setDoseBlocks] = useState<CalendarDoseBlock[]>(defaultDoseBlocks);
+  const injectionDateCount = doseBlocks.reduce((count, block) => count + block.dates.length, 0);
+  const draftCalendar = useMemo(() => calendarBlockSchedule(doseBlocks), [doseBlocks]);
   const [plottedCalendar, setPlottedCalendar] = useState<{ startDate: string; totalWeeks: number } | null>(null);
   const [durationInput, setDurationInput] = useState('');
   const [draftRegimens, setDraftRegimens] = useState<Regimen[]>(() => defaultRegimens(variant));
@@ -732,7 +750,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
   const totalWeeks = isCalendar ? plottedCalendar?.totalWeeks ?? null : durationInput === '' ? null : Number(durationInput);
   const startDate = isCalendar ? plottedCalendar?.startDate ?? '' : configuredStartDate;
   const hasDraftRetatrutide = draftRegimens.some((regimen) => regimen.compound === 'retatrutide');
-  const firstDraftTwoCompartmentDoseHourValue = (isCalendar ? draftCalendar.regimens ?? [] : draftRegimens)
+  const firstDraftTwoCompartmentDoseHourValue = (isCalendar ? draftCalendar.error === null ? draftCalendar.regimens : [] : draftRegimens)
     .filter((regimen) => regimen.compound !== 'retatrutide')
     .reduce((earliest, regimen) => Math.min(
       earliest,
@@ -818,7 +836,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
     const defaults = defaultRegimens(variant);
     setStartDate(todayInputValue());
     setDurationInput('');
-    setInjections(defaultInjections());
+    setDoseBlocks(defaultDoseBlocks());
     setPlottedCalendar(null);
     setDraftRegimens(defaults);
     setPlottedRegimens(defaults);
@@ -834,7 +852,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
 
       <section className="hero" id="top">
         <div>
-          <p className="eyebrow">{isCalendar ? 'Choose your own intervals' : variant === 'branded' ? 'GLP-1 concentration plotter' : 'Compounded & investigational simulator'}</p>
+          <p className="eyebrow">{isCalendar ? 'Variable injection dates' : variant === 'branded' ? 'GLP-1 concentration plotter' : 'Compounded & investigational simulator'}</p>
           <h1>{isCalendar ? <>Your doses.<br />Your exact dates.</> : variant === 'branded' ? <>See how each weekly dose<br />builds in your system.</> : <>Explore custom doses<br />without false precision.</>}</h1>
         </div>
         <div className="hero-stat" aria-label="Drug half-life reference">
@@ -857,7 +875,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
         <aside className="control-panel">
           <div className="panel-heading">
             <span>01</span>
-            <div><p>Build your regimen</p><small>{isCalendar ? 'Choose a date and dose for each injection' : variant === 'compounded' ? 'Add doses across your timeline' : 'Add weekly doses across your timeline'}</small></div>
+            <div><p>Build your regimen</p><small>{isCalendar ? 'Choose a dose, then add its injection dates' : variant === 'compounded' ? 'Add doses across your timeline' : 'Add weekly doses across your timeline'}</small></div>
           </div>
 
           {isCalendar ? (
@@ -914,10 +932,10 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
           </div>
 
           <div className="regimen-stack">
-            {isCalendar ? injections.map((injection, index) => (
-              <InjectionCard key={injection.id} injection={injection} index={index} removable={injections.length > 1}
-                onChange={(next) => setInjections((current) => current.map((item) => item.id === injection.id ? next : item))}
-                onRemove={() => setInjections((current) => current.filter((item) => item.id !== injection.id))} />
+            {isCalendar ? doseBlocks.map((block, index) => (
+              <DoseBlockCard key={block.id} block={block} index={index} removable={doseBlocks.length > 1} canAddDate={injectionDateCount < 100}
+                onChange={(next) => setDoseBlocks((current) => current.map((item) => item.id === block.id ? next : item))}
+                onRemove={() => setDoseBlocks((current) => current.filter((item) => item.id !== block.id))} />
             )) : draftRegimens.map((regimen, index) => (
               <CompoundCard
                 key={regimen.id}
@@ -933,12 +951,12 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             ))}
           </div>
 
-          {isCalendar ? <button className="add-button" type="button" disabled={injections.length >= 100}
-            onClick={() => setInjections((current) => [...current, {
+          {isCalendar ? <button className="add-button" type="button" disabled={injectionDateCount >= 100}
+            onClick={() => setDoseBlocks((current) => [...current, {
               ...current[current.length - 1],
-              id: Math.max(...current.map((injection) => injection.id)) + 1,
-              date: '',
-            }])}><span aria-hidden="true">+</span> Add injection</button> : <button
+              id: Math.max(...current.map((block) => block.id)) + 1,
+              dates: [''],
+            }])}><span aria-hidden="true">+</span> Add dose block</button> : <button
             className="add-button"
             type="button"
             disabled={totalWeeks === null || draftRegimens.length >= 5}
@@ -962,7 +980,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
               }];
             })}
           ><span aria-hidden="true">+</span> Add next dose &amp; duration</button>}
-          {isCalendar && injections.length >= 100 && <p className="calendar-error">You can plot up to 100 injections at a time.</p>}
+          {isCalendar && injectionDateCount >= 100 && <p className="calendar-error">You can plot up to 100 injection dates at a time.</p>}
 
           <div className="button-row">
             <button className="primary" type="button" disabled={(isCalendar ? draftCalendar.error !== null : !startDate || totalWeeks === null) || !bodySizeProfileValid} onClick={plot}>Plot concentration <span aria-hidden="true">↗</span></button>
@@ -985,7 +1003,7 @@ export function PlotterClient({ variant }: { variant: PlotterVariant }) {
             <div className="chart-empty" role="status">
               <span aria-hidden="true">↗</span>
               <strong>{isCalendar ? 'Enter your injection dates to begin.' : 'Enter a graph duration to begin.'}</strong>
-              <p>{isCalendar ? 'Add each injection, then select Plot concentration. Your graph duration is calculated automatically.' : 'Choose any whole number of weeks, then plot your concentration estimate.'}</p>
+              <p>{isCalendar ? 'Choose a dose and add its dates in each block, then select Plot concentration. Your graph duration is calculated automatically.' : 'Choose any whole number of weeks, then plot your concentration estimate.'}</p>
             </div>
           ) : (
             <>

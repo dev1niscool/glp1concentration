@@ -6,7 +6,7 @@ An educational, browser-based pharmacokinetic visualization for injected semaglu
 
 The separate Compounded tab accepts custom doses and optional whole-day injection intervals for semaglutide and tirzepatide and includes a clearly labeled educational retatrutide simulation. Compounded semaglutide and tirzepatide reuse the branded population-PK parameters as an estimate. Retatrutide uses a one-compartment surrogate fitted to published phase 1 human PK. Retatrutide is investigational, and FDA states it cannot be used in compounding under federal law.
 
-The **Choose your own intervals** tab (`/custom-intervals/`) accepts up to 100 individually dated semaglutide or tirzepatide injections. Each injection has its own dose and Morning/Afternoon/Night choice. Dates may be entered in any order; the graph starts at midnight on the earliest date and ends exactly seven modeled days after the latest injection. No graph duration is required. Click **Plot concentration** to apply changes; incomplete dates block a new plot while keeping the previous result.
+The **Variable injection dates** tab (`/custom-intervals/`) groups semaglutide or tirzepatide injections into dose blocks. Choose a peptide, dose, and Morning/Afternoon/Night time once per block, then add or remove multiple dates inside that block. Add another dose block when the dose changes. Up to 100 injection dates are supported in total; duplicate dates within one block must be removed before plotting. Dates may be entered in any order; the graph starts at midnight on the earliest date and ends exactly seven modeled days after the latest injection. No graph duration is required. Click **Plot concentration** to apply changes; incomplete dates block a new plot while keeping the previous result.
 
 The Methodology page documents the equation, exact parameters used by the code, dose-time offsets, validation checks, primary sources, and limitations.
 
@@ -197,7 +197,7 @@ $$
 
 Here \(\delta\in\{6,12,18\}\) is the internal Morning/Afternoon/Night offset. \(I=7\) for standard weekly regimens; on the Compounded tab, \(I\) can instead be the selected whole-day interval.
 
-For exact-date schedules, each injection is scheduled once at `24 × (injection calendar day − earliest calendar day) + δ`. Calendar days use a timezone-independent 24-hour grid, so daylight-saving changes do not shift entered dates. The final sample is at `max(injection hours) + 168`, without rounding to whole weeks. Both compartment models use these explicit dose times, and the body-size model uses the earliest injection as its first-dose reference. The full graph is limited to 520 weeks. Compare shows one curve per entered injection, while Accumulate sums their contributions.
+For exact-date schedules, each injection is scheduled once at `24 × (injection calendar day − earliest calendar day) + δ`. Calendar days use a timezone-independent 24-hour grid, so daylight-saving changes do not shift entered dates. The final sample is at `max(injection hours) + 168`, without rounding to whole weeks. Both compartment models use these explicit dose times, and the body-size model uses the earliest injection as its first-dose reference. The full graph is limited to 520 weeks. Compare shows one curve per dose block, while Accumulate sums their contributions.
 
 Repeated injections and active regimens are superposed:
 

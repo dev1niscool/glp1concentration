@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   COMPOUNDS,
   calendarSchedule,
+  calendarBlockSchedule,
   DOSE_TIME_LABELS,
   doseConcentrationNgMl,
   modeledWeightAtHour,
@@ -16,6 +17,53 @@ import {
 
 const customExample = ['2026-08-11', '2026-08-18', '2026-08-25', '2026-09-01', '2026-09-03']
   .map((date, index) => ({ id: index + 1, date, compound: 'tirzepatide', doseMg: index === 2 ? 5 : 2.5, timeOfDay: 'morning' }));
+
+const customBlocks = [
+  { id: 1, compound: 'tirzepatide', doseMg: 2.5, dates: ['2026-08-11', '2026-08-18'], timeOfDay: 'morning' },
+  { id: 2, compound: 'tirzepatide', doseMg: 5, dates: ['2026-08-25'], timeOfDay: 'morning' },
+  { id: 3, compound: 'tirzepatide', doseMg: 2.5, dates: ['2026-09-01', '2026-09-03'], timeOfDay: 'morning' },
+];
+
+test('multiple dates per block preserve all five example doses and both model outputs', () => {
+  const grouped = calendarBlockSchedule(customBlocks);
+  const individual = calendarSchedule(customExample);
+  assert.equal(grouped.error, null);
+  assert.equal(grouped.startDate, '2026-08-11');
+  assert.equal(grouped.endDate, '2026-09-10');
+  assert.equal(grouped.firstDoseHour, 6);
+  assert.equal(grouped.totalWeeks, individual.totalWeeks);
+  assert.deepEqual(grouped.regimens.map(regimenDoseHours), [[6, 174], [342], [510, 558]]);
+  assert.deepEqual(grouped.regimens.map((regimen) => regimen.doseMg), [2.5, 5, 2.5]);
+  for (const model of [{ kind: 'one-compartment' }, {
+    kind: 'personalized-two-compartment', startingWeightKg: 100, heightCm: 175,
+    sex: 'male', firstDoseHour: grouped.firstDoseHour,
+  }]) {
+    const separate = individual.regimens.map((regimen) => sampleRegimen(regimen, individual.totalWeeks, 6, model));
+    const together = grouped.regimens.map((regimen) => sampleRegimen(regimen, grouped.totalWeeks, 6, model));
+    for (const [blockIndex, doseIndices] of [[0, [0, 1]], [1, [2]], [2, [3, 4]]]) {
+      together[blockIndex].forEach((value, index) => {
+        const expected = doseIndices.reduce((sum, doseIndex) => sum + separate[doseIndex][index], 0);
+        assert.ok(Math.abs(value - expected) < 1e-8);
+      });
+    }
+  }
+});
+
+test('dose blocks validate dates and recalculate the range after dates or blocks change', () => {
+  for (const blocks of [[], [{ ...customBlocks[0], dates: [] }], [{ ...customBlocks[0], dates: [''] }],
+    [{ ...customBlocks[0], dates: ['2026-08-11', '2026-08-11'] }],
+    [{ ...customBlocks[0], dates: Array(101).fill('2026-08-11') }]]) {
+    assert.ok(calendarBlockSchedule(blocks).error);
+  }
+  const reordered = calendarBlockSchedule([...customBlocks].reverse().map((block) => ({ ...block, dates: [...block.dates].reverse() })));
+  assert.equal(reordered.startDate, '2026-08-11');
+  assert.equal(reordered.endDate, '2026-09-10');
+  assert.deepEqual(regimenDoseHours(reordered.regimens[0]), [510, 558]);
+  const removedDate = calendarBlockSchedule([...customBlocks.slice(0, 2), { ...customBlocks[2], dates: ['2026-09-01'] }]);
+  assert.equal(removedDate.endDate, '2026-09-08');
+  assert.equal(calendarBlockSchedule(customBlocks.slice(0, 2)).endDate, '2026-09-01');
+  assert.equal(calendarBlockSchedule([{ ...customBlocks[0], dates: ['2026-08-18'] }, ...customBlocks.slice(1)]).startDate, '2026-08-18');
+});
 
 test('exact dates preserve the requested five doses and finish one week after the last injection', () => {
   const schedule = calendarSchedule(customExample);

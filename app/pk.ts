@@ -23,6 +23,33 @@ export type CalendarInjection = {
   timeOfDay: DoseTime;
 };
 
+export type CalendarDoseBlock = Omit<CalendarInjection, 'date'> & { dates: string[] };
+
+export function calendarBlockSchedule(blocks: CalendarDoseBlock[]) {
+  if (blocks.length === 0 || blocks.some((block) => block.dates.length === 0)) {
+    return { error: 'Add at least one date to every dose block.' } as const;
+  }
+  if (blocks.reduce((count, block) => count + block.dates.length, 0) > 100) {
+    return { error: 'You can plot up to 100 injection dates at a time.' } as const;
+  }
+  if (blocks.some((block) => new Set(block.dates.filter(Boolean)).size !== block.dates.filter(Boolean).length)) {
+    return { error: 'Choose each date only once within a dose block.' } as const;
+  }
+  const schedule = calendarSchedule(blocks.flatMap((block) =>
+    block.dates.map((date) => ({ ...block, date }))));
+  if (schedule.error !== null) return schedule;
+  let offset = 0;
+  const regimens = blocks.map((block) => {
+    const doses = schedule.regimens.slice(offset, offset + block.dates.length);
+    offset += block.dates.length;
+    const explicitDoseHours = doses.flatMap(regimenDoseHours).sort((a, b) => a - b);
+    return { ...doses[0], id: block.id, explicitDoseHours,
+      startWeek: Math.floor(explicitDoseHours[0] / HOURS_PER_WEEK) + 1,
+      endWeek: Math.floor(explicitDoseHours[explicitDoseHours.length - 1] / HOURS_PER_WEEK) + 1 };
+  });
+  return { ...schedule, regimens };
+}
+
 // Calendar days are modeled as 24 hours, independent of daylight-saving changes.
 function calendarDay(date: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;

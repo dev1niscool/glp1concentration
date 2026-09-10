@@ -6,7 +6,7 @@ export function SiteHeader({ active }: { active: 'plotter' | 'compounded' | 'cus
       <nav className="page-tabs" aria-label="Primary navigation">
         <Link className={active === 'plotter' ? 'active' : ''} href="/">Plotter</Link>
         <Link className={active === 'compounded' ? 'active' : ''} href="/compounded">Compounded</Link>
-        <Link className={active === 'custom-intervals' ? 'active' : ''} href="/custom-intervals">Choose your own intervals</Link>
+        <Link className={active === 'custom-intervals' ? 'active' : ''} href="/custom-intervals">Variable injection dates</Link>
         <Link className={active === 'methodology' ? 'active' : ''} href="/methodology">Methodology</Link>
       </nav>
     </header>

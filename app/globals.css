@@ -385,3 +385,13 @@ footer p { margin: 0; font-size: 10px; }
 .injection-card label { font-size: 12px; letter-spacing: .03em; text-transform: none; }
 .injection-card input, .injection-card select { font-size: 16px; }
 .injection-card .remove-button { width: 36px; height: 36px; }
+
+.injection-dates { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.injection-dates > p { margin: 0 0 5px; font-size: 14px; font-weight: 700; }
+.injection-dates > small { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.injection-date-row { display: flex; align-items: flex-end; gap: 8px; }
+.injection-date-row label { flex: 1; min-width: 0; margin-top: 12px; }
+.injection-date-row .remove-button { flex: none; margin-bottom: 3px; }
+.add-date-button { font-size: 13px; }
+.legend > div, .legend p { min-width: 0; }
+.legend small { overflow-wrap: anywhere; }
