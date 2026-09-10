@@ -480,7 +480,14 @@ export function sampleRegimen(
 
 export const DEFAULT_INTERVAL_CEILING_OFFSET = 20;
 export const INTERVAL_PROJECTION_WEEKS = 52;
+export const INTERVAL_PREVIEW_WEEKS = 10;
 export const MAX_SEARCH_INTERVAL_DAYS = 365;
+
+export type IntervalPreview = {
+  endHour: number;
+  points: { hour: number; concentration: number }[];
+  doses: { hour: number; doseMg: number; projected: boolean }[];
+};
 
 export function latestCalendarDose(regimens: Regimen[]) {
   const doses = regimens.flatMap((regimen) => (regimen.explicitDoseHours ?? [])
@@ -496,7 +503,8 @@ type IntervalSearchResult =
   | { status: 'no-match'; ceilingNgMl: number; lowestPeakNgMl: number }
   | { status: 'match'; intervalDays: number; doseMg: number; compound: CompoundId;
       ceilingNgMl: number; peakNgMl: number; peakHour: number;
-      existingDosePeakNgMl: number; firstFutureHour: number; endHour: number };
+      existingDosePeakNgMl: number; firstFutureHour: number; endHour: number;
+      preview: IntervalPreview };
 
 /** Numerical scenario search only; a reference concentration is not a clinical target. */
 export async function findModeledInterval(
@@ -571,7 +579,26 @@ export async function findModeledInterval(
       if (!Number.isFinite(total)) throw new Error('The projection produced a non-finite concentration.');
       if (total > peakNgMl) { peakNgMl = total; peakHour = index * step; }
     }
-    return { peakNgMl, peakHour, existingDosePeakNgMl, firstFutureHour, endHour };
+    // Reuse the refined simulation so the chart and search have identical model
+    // assumptions and integration precision, including all residual exposure.
+    let preview: IntervalPreview | undefined;
+    if (step === 0.25) {
+      const previewEndHour = firstFutureHour + INTERVAL_PREVIEW_WEEKS * HOURS_PER_WEEK;
+      const points: IntervalPreview['points'] = [];
+      for (let index = 0; index <= Math.round(previewEndHour / step); index++) {
+        const hour = index * step;
+        if (hour % 6 === 0 || hour === firstFutureHour || hour === previewEndHour) {
+          points.push({ hour, concentration: remaining[index] + values[index] });
+        }
+      }
+      preview = { endHour: previewEndHour, points, doses: [
+        ...regimens.flatMap((regimen) => regimen.explicitDoseHours!.map((hour) =>
+          ({ hour, doseMg: regimen.doseMg, projected: false }))),
+        ...doseHours.filter((hour) => hour < previewEndHour).map((hour) =>
+          ({ hour, doseMg, projected: true })),
+      ].sort((a, b) => a.hour - b.hour) };
+    }
+    return { peakNgMl, peakHour, existingDosePeakNgMl, firstFutureHour, endHour, preview };
   }
 
   let lowestPeakNgMl = Number.POSITIVE_INFINITY;
@@ -588,7 +615,7 @@ export async function findModeledInterval(
     const peakNgMl = Math.ceil(refined.peakNgMl * 10) / 10;
     if (peakNgMl <= ceilingNgMl) {
       return { status: 'match', intervalDays, doseMg, compound: latest.compound,
-        ceilingNgMl, ...refined, peakNgMl };
+        ceilingNgMl, ...refined, peakNgMl, preview: refined.preview! };
     }
   }
   return { status: 'no-match', ceilingNgMl, lowestPeakNgMl };

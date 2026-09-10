@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { IntervalChart } from './interval-chart';
 import {
   COMPOUNDS,
   DOSE_TIME_LABELS,
@@ -131,6 +132,11 @@ export function IntervalCalculator({ regimens, model, startDate, needsPlot }: {
           <p><strong>This is not a guarantee of your concentration or freedom from side effects.</strong> The result applies only to the modeled period and assumptions. No injection dates have been changed.</p>
         </div>}
       </div>
+      {visibleResult?.status === 'match' && <IntervalChart
+        preview={visibleResult.preview} firstFutureHour={visibleResult.firstFutureHour}
+        ceilingNgMl={visibleResult.ceilingNgMl} intervalDays={visibleResult.intervalDays}
+        doseMg={visibleResult.doseMg} startDate={startDate}
+      />}
       <details className="interval-methods"><summary>Calculation assumptions and limits</summary>
         <p>Tests 1–{MAX_SEARCH_INTERVAL_DAYS}-day intervals in order. Each scenario repeats the selected dose for {INTERVAL_PROJECTION_WEEKS} weeks, then follows decay for ten reference half-lives. Peaks from the first simulated additional injection onward are screened hourly; a candidate match is rechecked every 15 minutes and rounded upward to 0.1 ng/mL for comparison. Sampling can miss a peak between points.</p>
         <p>The plotted medication history and model are retained. Two-compartment mode continues the site’s assumed 1 lb/week weight loss and 30 kg floor. This is a finite simulation, not an indefinite steady-state guarantee, a validated toxicity threshold, or an approved dosing schedule.</p>

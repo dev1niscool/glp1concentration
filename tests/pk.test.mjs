@@ -56,10 +56,26 @@ test('interval search includes accumulation and matches an independent steady-st
   assert.ok(Math.abs(result.peakNgMl - steadyPeak(8)) < 0.2);
   assert.equal(result.firstFutureHour, 666 + 8 * 24);
   assert.ok(result.endHour > result.firstFutureHour + 52 * 168);
+  assert.equal(result.preview.endHour, result.firstFutureHour + 10 * 168);
+  assert.equal(result.preview.points[0].hour, 0);
+  assert.equal(result.preview.points.at(-1).hour, result.preview.endHour);
+  assert.equal(result.preview.doses.filter((dose) => !dose.projected).length, 5);
+  const projected = result.preview.doses.filter((dose) => dose.projected);
+  assert.equal(projected.length, 9);
+  assert.equal(projected[0].hour, result.firstFutureHour);
+  assert.ok(projected.every((dose, index) => dose.doseMg === 5 && dose.hour === result.firstFutureHour + index * 8 * 24));
+  for (const point of result.preview.points) {
+    const expected = result.preview.doses.reduce((sum, dose) => sum + doseConcentrationNgMl('tirzepatide', dose.doseMg, point.hour - dose.hour), 0);
+    assert.ok(Math.abs(point.concentration - expected) < 1e-8, `preview differs at hour ${point.hour}`);
+  }
+  const boundary = result.preview.points.find((point) => point.hour === result.firstFutureHour);
+  assert.ok(boundary.concentration > 0, 'earlier exposure must not reset at the color boundary');
   const smallerDose = await findModeledInterval(intervalHistory.regimens, 2.5, 609, { kind: 'one-compartment' });
   assert.equal(smallerDose.status, 'match');
   assert.equal(smallerDose.doseMg, 2.5);
   assert.ok(smallerDose.intervalDays < result.intervalDays);
+  assert.ok(smallerDose.preview.doses.filter((dose) => dose.projected).every((dose) => dose.doseMg === 2.5));
+  assert.deepEqual(smallerDose.preview.doses.filter((dose) => !dose.projected), result.preview.doses.filter((dose) => !dose.projected));
 });
 
 test('interval search carries existing exposure and the changing body-size model forward', async () => {
@@ -78,6 +94,28 @@ test('interval search carries existing exposure and the changing body-size model
     measuredPeak = Math.max(measuredPeak, combined.reduce((sum, series) => sum + series[index], 0));
   }
   assert.equal(result.peakNgMl, Math.ceil(measuredPeak * 10) / 10);
+  for (const point of result.preview.points) {
+    assert.equal(point.concentration, combined.reduce((sum, series) => sum + series[point.hour * 4], 0));
+  }
+});
+
+test('ten-week preview retains semaglutide history and excludes injections at its endpoint', async () => {
+  const history = calendarBlockSchedule([{ id: 1, compound: 'semaglutide', doseMg: 0.25, dates: ['2026-12-31'], timeOfDay: 'afternoon' }]);
+  const original = structuredClone(history);
+  const model = { kind: 'reference-two-compartment' };
+  const result = await findModeledInterval(history.regimens, 0.5, 10000, model, 0);
+  assert.equal(result.status, 'match');
+  assert.equal(result.intervalDays, 1);
+  assert.deepEqual(history, original);
+  assert.equal(result.firstFutureHour, 36);
+  assert.equal(result.preview.endHour, 1716);
+  const future = result.preview.doses.filter((dose) => dose.projected);
+  assert.equal(future.length, 70);
+  assert.ok(future.every((dose) => dose.doseMg === 0.5 && dose.hour % 24 === 12 && dose.hour < result.preview.endHour));
+  for (const point of result.preview.points) {
+    const expected = result.preview.doses.reduce((sum, dose) => sum + doseConcentrationNgMl('semaglutide', dose.doseMg, point.hour - dose.hour, model), 0);
+    assert.ok(Math.abs(expected - point.concentration) < 1e-8);
+  }
 });
 
 test('editable ceiling offsets support zero and decimals and change the numeric search ceiling', async () => {

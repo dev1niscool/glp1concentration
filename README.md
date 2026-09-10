@@ -10,7 +10,9 @@ The **Variable injection dates** tab (`/custom-intervals/`) groups semaglutide o
 
 The Variable injection dates tab also includes an **Interval calculator**. After plotting, enter a reference concentration in ng/mL; the numerical comparison ceiling is that value plus an editable ceiling offset, initially 20 ng/mL. The offset accepts zero or any positive finite value, including decimals. The editable dose defaults to the chronologically latest plotted injection, regardless of block order. This is a model-only scenario search, not a personal tolerability assessment, a dosing recommendation, or a guarantee against side effects. Changes to dates or model inputs require replotting before another calculation.
 
-The Methodology page documents the equation, exact parameters used by the code, dose-time offsets, validation checks, primary sources, and limitations.
+After a successful interval calculation, a separate graph shows all entered history in dark green and a dashed bronze continuation through ten weeks after the first projected injection. It repeats the result’s selected dose and interval while retaining residual concentration from every entered dose. The chart reuses six-hour points from the refined 15-minute simulation, includes the comparison ceiling and injection markers, and supports pointer inspection, a keyboard-accessible timeline slider, and an expandable injection-date table. Projected doses occur before the end of the preview. The reported peak still covers the full 52-week repeat period plus decay and can fall beyond this ten-week view. Editing calculator inputs clears the result and graph; the main plotted history and entered dates are unchanged.
+
+The Methodology page documents the equation, exact parameters used by the code, dose-time offsets, variable-date blocks, interval search, continuation graph, validation checks, primary sources, and limitations.
 
 ## Model
 

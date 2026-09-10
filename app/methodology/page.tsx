@@ -4,7 +4,7 @@ import { SiteFooter, SiteHeader } from '../site-chrome';
 
 export const metadata: Metadata = {
   title: 'Methodology — GLP-1 Concentration Plotter',
-  description: 'The equations, pharmacokinetic parameters, validation checks, sources, and limitations behind the branded and compounded GLP-1 plotters.',
+  description: 'The equations, pharmacokinetic parameters, validation checks, sources, and limitations behind the branded, compounded, and variable-date GLP-1 plotters and interval calculator.',
   openGraph: {
     title: 'Methodology — GLP-1 Concentration Plotter',
     description: 'See exactly how the semaglutide and tirzepatide concentration curves are calculated and validated.',
@@ -94,8 +94,9 @@ export default function MethodologyPage() {
         <a href="#model">01 · Model</a>
         <a href="#parameters">02 · Parameters</a>
         <a href="#checks">03 · Validation</a>
-        <a href="#limits">04 · Limits</a>
-        <a href="#sources">05 · Sources</a>
+        <a href="#variable-dates">04 · Variable dates</a>
+        <a href="#limits">05 · Limits</a>
+        <a href="#sources">06 · Sources</a>
       </section>
 
       <section className="method-block" id="model">
@@ -265,12 +266,11 @@ export default function MethodologyPage() {
             <div><span>Unit conversion</span><math className="math-mini" display="block" aria-label="one milligram per liter equals one thousand nanograms per milliliter"><mfrac><mn>1 mg</mn><mn>1 L</mn></mfrac><mo>=</mo><mfrac><mn>1000 ng</mn><mn>1 mL</mn></mfrac></math><p>Dose is entered in mg, amount states use µg, volume is in L, and the chart reports ng/mL.</p></div>
             <div><span>Area under curve</span><div className="math-mini-stack"><math className="math-mini" display="block" aria-label="T sub j equals the average of concentration j minus one and concentration j"><msub><mi>T</mi><mi>j</mi></msub><mo>=</mo><mfrac><mrow><msub><mi>C</mi><mrow><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>C</mi><mi>j</mi></msub></mrow><mn>2</mn></mfrac></math><math className="math-mini" display="block" aria-label="AUC is approximated by the sum from j equals 1 to N of T sub j times delta t"><mi>AUC</mi><mo>≈</mo><munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><msub><mi>T</mi><mi>j</mi></msub><mi>Δt</mi></math><math className="math-mini" display="block" aria-label="delta t equals six hours"><mi>Δt</mi><mo>=</mo><mn>6</mn><mi>h</mi></math></div><p>The displayed AUC uses the trapezoidal rule with six-hour samples.</p></div>
           </div>
-          <p className="model-distinction"><strong>Variable injection dates.</strong> Each dated injection contributes exactly once, at 24 × the number of calendar days since the earliest entered date, plus its Morning, Afternoon, or Night offset. Calendar days use a fixed 24-hour grid, independent of daylight-saving changes. The graph starts at midnight on the earliest date and ends 168 modeled hours after the latest injection, without rounding to whole weeks. Both compartment options use this schedule. Each dose block shares a peptide, dose, and time of day across its selected dates. Compare shows each dose block separately; Accumulate sums all injections. Up to 100 injections are supported within a total graph span of 520 weeks.</p>
-          <p className="model-distinction"><strong>Interval calculator.</strong> A reference concentration plus a user-selected offset (initially 20 ng/mL; zero and positive decimal values are allowed) defines a numerical comparison ceiling, not a validated tolerability or toxicity threshold. The calculator tests 1–365-day spacings for one medication, starting after the most recent plotted injection. Each candidate adds 52 weeks of repeated doses and ten reference half-lives of decay follow-up, retaining residual exposure from all plotted doses and the selected model. Hourly screening is followed by a 15-minute recalculation of a candidate match, rounding its peak upward to 0.1 ng/mL. The first tested interval meeting that ceiling is reported only as a model scenario. Peaks from already-entered doses before the continuation are reported separately when above the ceiling. The result does not change entered dates, guarantee future concentrations, identify a safe interval, or predict side effects. Sampling can miss peaks between points, and two-compartment mode continues the assumed weight-loss trajectory throughout this finite projection.</p>
+          <p className="model-distinction">Exact-date schedules and the interval calculator use the same pharmacokinetic models. See <a href="#variable-dates">Variable injection dates and modeled continuations</a> for their scheduling and preview rules.</p>
           <ol className="process-list">
             <li><span>1</span><div><strong>Schedule doses</strong><p>The selected start date begins at midnight. Morning, Afternoon, and Night map internally to +6, +12, and +18 hours. Standard regimens repeat every 168 hours; a compounded custom interval repeats every X × 24 hours until the end of the selected final week.</p></div></li>
             <li><span>2</span><div><strong>Apply the weight assumption</strong><p>In two-compartment mode, modeled weight begins at the entered first-dose weight and decreases continuously by 1 lb per week. To prevent impossible values on very long graphs, the calculation floors modeled weight at 30 kg (66 lb).</p></div></li>
-            <li><span>3</span><div><strong>Sample the timeline</strong><p>The body-size-adjusted semaglutide and tirzepatide differential equations are integrated in one-hour Runge–Kutta steps. All graph curves and AUC values are retained at six-hour intervals through 1–520 weeks.</p></div></li>
+            <li><span>3</span><div><strong>Sample the timeline</strong><p>The body-size-adjusted semaglutide and tirzepatide differential equations are integrated in one-hour Runge–Kutta steps. The main graph curves and AUC values are retained at six-hour intervals through the selected duration. The interval calculator separately refines candidate matches at 15-minute steps.</p></div></li>
             <li><span>4</span><div><strong>Accumulate or compare</strong><p>Accumulate sums the active regimen curves. Compare keeps them as separate lines. Different compounds are never treated as dose-equivalent.</p></div></li>
             <li><span>5</span><div><strong>Scale and inspect</strong><p>The y-axis rounds upward to a clean 1–2–5–10 scale above the maximum. Hover and keyboard readings snap to the nearest six-hour sample.</p></div></li>
           </ol>
@@ -321,12 +321,32 @@ export default function MethodologyPage() {
             <article><span className="check-mark">✓</span><h3>Custom interval scheduling</h3><p>Automated checks confirm that compounded schedules repeat at the selected whole-day interval and stop before the week following the chosen “To week.”</p></article>
             <article><span className="check-mark">✓</span><h3>Retatrutide phase 1 fit</h3><p>At 1 mg, the surrogate predicts T<sub>max</sub> 37.4 hours, C<sub>max</sub> 113.5 ng/mL, and AUC 28,227 ng·h/mL. Phase 1 observations were 12–72 hours overall, 110 ng/mL, and 28,300 ng·h/mL.</p></article>
           </div>
+          <p>Additional automated checks cover multiple dates per block, chronological dose defaults, editable ceiling offsets, residual accumulation, and interval-search rejection and cancellation. The ten-week preview is compared with independent dose summation and the refined body-size simulation, including dose overrides, the color-change boundary, and the final injection cutoff. These are implementation checks, not clinical validation of a personal dosing interval.</p>
           <div className="audit-strip"><span>Automated calculation checks</span><strong>two published semaglutide structures</strong><strong>body-size covariates</strong><strong>1 lb/week assumption</strong><strong>two-compartment AUC balance</strong></div>
         </div>
       </section>
 
+      <section className="method-block" id="variable-dates">
+        <div className="method-block-title"><span>04</span><div><p className="eyebrow">Variable injection dates</p><h2>Entered history, then a modeled continuation.</h2></div></div>
+        <div className="method-copy">
+          <p className="method-lede">The <Link href="/custom-intervals">Variable injection dates tab</Link> supports multiple dates within each dose block and an optional interval calculator. It uses the same semaglutide and tirzepatide models described above.</p>
+          <h3>Dose blocks and calendar dates</h3>
+          <p>Choose a peptide, dose per injection, and Morning, Afternoon, or Night once per block, then add as many dates as needed. Add a block when the dose or time changes. Dates can be entered in any order. Up to 100 injections are supported, with the full main graph limited to 520 weeks. Empty or invalid dates and duplicate dates within a block must be resolved before plotting.</p>
+          <p>Each injection contributes once at 24 × the calendar days since the earliest date, plus the selected time offset: 6, 12, or 18 hours. Calendar days are fixed at 24 hours, independent of daylight-saving changes. The main graph begins at midnight on the earliest date and ends exactly 168 modeled hours after the latest injection. Compare displays dose blocks separately; Accumulate sums them.</p>
+          <h3>Finding a numerical interval match</h3>
+          <p>The calculator uses the last plotted schedule and model. Its dose defaults to the chronologically latest injection, regardless of block order, and can be changed. Enter a positive reference concentration and a ceiling offset, initially +20 ng/mL; the offset permits zero and positive decimals. The comparison ceiling equals reference + offset. This numerical ceiling is not a validated tolerability or toxicity threshold.</p>
+          <p>The search requires one medication and an unambiguous latest injection time. It tests whole-day intervals from 1 to 365 days in order. For each candidate, the first additional injection is placed that many days after the latest entered injection, at the same time of day. The chosen dose then repeats at that spacing for 52 weeks, followed by ten reference half-lives of decay. Concentration from every entered dose remains included, and the selected model and body-size assumptions continue along the original timeline.</p>
+          <p>Continuation peaks are screened hourly. A candidate match is recalculated every 15 minutes, including the integration step for the body-size-adjusted model, and its peak is rounded upward to 0.1 ng/mL before comparison. The first interval that passes is reported as a model-only scenario. The peak from existing doses between the latest entered injection and the first projected injection is assessed separately and flagged if it exceeds the ceiling. No match means none of the tested intervals passed for that dose and simulated period.</p>
+          <h3>Reading the 10-week continuation graph</h3>
+          <p>A successful calculation adds a separate graph from the earliest entered date through ten weeks after the first projected injection. Solid dark green shows the entered history and its decay up to that first projected injection. Dashed bronze continues the total concentration with the modeled dose and interval. The line is continuous at the color change: earlier exposure is retained, not reset to zero.</p>
+          <p>The graph reuses six-hour samples from the candidate’s refined simulation. A vertical divider marks the first projected injection, small marks show entered and projected doses, and a dotted horizontal line shows the numerical ceiling. Hover, tap, or move the keyboard-accessible slider to inspect dates and concentrations. The expandable injection table lists the dose, date, time category, and whether each injection was entered or projected. Projected injections occur before the end of the ten-week preview.</p>
+          <p>The ten-week view is a preview of the longer calculation. The highest peak reported by the calculator can occur outside it. The main entered-dose graph retains its original one-week follow-up. Changing the calculator reference, offset, or dose clears its previous result and preview; changing schedule or model inputs requires replotting. The calculator never adds projected dates to the entered dose blocks.</p>
+          <p><strong>A model match does not establish a safe interval or predict side effects.</strong> Sampling can miss peaks between points. The finite simulation is not an indefinite steady-state guarantee. Body-size-adjusted mode continues the assumed 1 lb/week weight loss and 30 kg floor, which may differ from actual weight changes. Review medication timing and side effects with your prescriber.</p>
+        </div>
+      </section>
+
       <section className="method-block" id="limits">
-        <div className="method-block-title"><span>04</span><div><p className="eyebrow">Model limits</p><h2>What this cannot tell you.</h2></div></div>
+        <div className="method-block-title"><span>05</span><div><p className="eyebrow">Model limits</p><h2>What this cannot tell you.</h2></div></div>
         <div className="method-copy limit-copy">
           <p>Actual exposure varies with body size, injection timing and site, formulation, adherence, individual clearance, assay method, and other clinical factors. The optional body-size inputs refine population-model parameters but do not identify an individual’s true pharmacokinetics.</p>
           <ul>
