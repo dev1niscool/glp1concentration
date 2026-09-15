@@ -263,6 +263,14 @@ Authenticated users can read only their own row. Writes go through `save_injecti
 
 Cloudflare Web Analytics is supported through its privacy-first JavaScript beacon. Create a Web Analytics site for `dev1niscool.github.io`, then add its site token to the GitHub repository variable `CLOUDFLARE_WEB_ANALYTICS_TOKEN`; the Pages workflow includes it in every route on the next deployment. For local builds, copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN`. Leaving the value blank disables analytics.
 
+## Crawlers and indexing
+
+`public/robots.txt` disallows all crawling, with explicit rules for major search, AI, and dataset agents. The shared layout also emits `noindex`, `nofollow`, `nosnippet`, `noimageindex`, archive/cache opt-outs, and zero-preview metadata on every page, including My Profile. These requests do not affect normal browser use.
+
+GitHub Pages hosts this project under `/glp1concentration/`, so compliant crawlers use **https://dev1niscool.github.io/robots.txt**, maintained in `dev1niscool/dev1niscool.github.io`. That file excludes this project's directory, including its bare and query-string URLs, while leaving other projects' rules unchanged. Keep that host-level exclusion when updating the portfolio repository; the copy in this project alone cannot control crawling on a shared host.
+
+Robots policies are voluntary and do not make public files private. A crawler blocked by robots.txt cannot discover a newly added HTML `noindex` rule, so existing indexed URLs may persist as URL-only listings. Removing an existing listing may require the search engine's removal tools or temporarily allowing that crawler to fetch the noindex metadata. GitHub's repository pages have their own indexing policy; these files control the deployed website, not github.com.
+
 ## Disclaimer
 
 Educational use only. Not medical advice. Do not use the chart to start, stop, combine, or change medication.

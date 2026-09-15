@@ -20,6 +20,18 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://dev1niscool.github.io/glp1concentration/'),
   title: 'GLP-1 Concentration Plotter',
   description: 'Plot modeled semaglutide and tirzepatide plasma concentration over time.',
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nocache: true,
+    nosnippet: true,
+    noimageindex: true,
+    notranslate: true,
+    'max-snippet': 0,
+    'max-image-preview': 'none',
+    'max-video-preview': 0,
+  },
   applicationName: 'GLP-1 Plotter',
   manifest: publicAsset('/manifest.webmanifest'),
   icons: {

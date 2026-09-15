@@ -1,0 +1,30 @@
+# GLP-1 Concentration Plotter: please do not crawl, index, archive, or reuse.
+# All paths, query strings, assets, and future pages are covered by /.
+# On GitHub Pages, the authoritative policy is at the host root:
+# https://dev1niscool.github.io/robots.txt
+# This copy also applies if the project is hosted at its own domain root.
+
+User-agent: *
+Disallow: /
+
+# Explicit automated search, AI, dataset, and user-fetch agent exclusions.
+# Each specific group must repeat Disallow; wildcard rules are not inherited.
+User-agent: Googlebot
+User-agent: Googlebot-Image
+User-agent: Googlebot-Video
+User-agent: AdsBot-Google
+User-agent: AdsBot-Google-Mobile
+User-agent: Google-Extended
+User-agent: bingbot
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: OAI-AdsBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: CCBot
+Disallow: /
+
+# These are voluntary crawl rules, not authentication or an access barrier.
+# Indexing directives are delivered separately in every page's HTML metadata.
