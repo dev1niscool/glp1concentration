@@ -14,7 +14,11 @@ After a successful interval calculation, a separate graph shows all entered hist
 
 Inputs are saved automatically with versioned `localStorage` records, separately for the branded, compounded, and variable-date tabs. Saved fields include dates/dose blocks, doses and intervals, duration, chart/model choices, body-size inputs, and calculator reference/offset/dose selection. Complete saved inputs redraw the main graph after a return visit; incomplete drafts remain editable. Interval results and continuation graphs are recalculated on request. A dose override is tied to its medication, and “use latest entered dose” preserves the automatic dose default. Reset deletes only the current tab’s saved inputs. Data stays in that browser, is not uploaded or synced across devices, and can be removed by clearing site data. Storage failures do not prevent plotting; an inline notice explains when saving or clearing is unavailable. Malformed, unsupported-version, or out-of-range saved records are ignored.
 
-The Methodology page documents the equation, exact parameters used by the code, dose-time offsets, variable-date blocks, interval search, continuation graph, saved inputs, validation checks, primary sources, and limitations.
+The **My Profile** tab (`/my-profile/`) keeps an editable injection history separate from graph scenarios. Each block shares one medication, dose, and time of day across multiple dates. Edits save automatically in this browser. Export a versioned JSON backup or import a previously exported file after reviewing the replacement. The Variable injection dates tab's **Load from My Profile** button copies this history into its dose blocks; plotting and later scenario edits do not alter the profile.
+
+Optional **username/password accounts** store a profile in Supabase for use on other devices. Usernames are case-insensitive and contain 3–32 letters, numbers, or underscores; new passwords require at least 12 characters. No email address is collected, and the site provides no forgotten-password recovery. Keep credentials and export backups. After editing, choose **Save to account**; on another device, sign in, choose **Load account profile**, then **Use account copy**. Account saving is explicit, while browser saving is automatic. An existing account copy is reviewed before replacement, and revision checks reject saves that would overwrite newer changes from another device. Sign-out leaves the local browser copy in place. Only injection-history blocks are uploaded when saved to the account; graph settings, body-size inputs, and calculator entries stay local.
+
+The Methodology page documents the equation, exact parameters used by the code, dose-time offsets, variable-date blocks, interval search, continuation graph, saved inputs, profiles, validation checks, primary sources, and limitations.
 
 ## Model
 
@@ -246,6 +250,14 @@ npm run test:pk
 ```
 
 `npm run build` validates the hosted Sites build. `GITHUB_PAGES=true npm run build:pages` creates the static `out` directory deployed by the included GitHub Pages workflow.
+
+## Account storage setup
+
+The static GitHub Pages frontend connects directly to Supabase Auth and a table protected by row-level security. The browser bundle contains only the project URL and public publishable key; never put a secret or service-role key in a `NEXT_PUBLIC_` variable. Optional configuration overrides are shown in `.env.example`.
+
+For another Supabase project, apply `supabase/profile-schema.sql`, enable the email/password provider, disable email confirmation for this username-only design, and set minimum password length to 12. The app maps normalized usernames to non-deliverable `@profiles.glp1.invalid` identifiers internally; these are not real email addresses. Keep secure email changes enabled. No SMTP provider is needed. `supabase/profile-checks.sql` verifies ownership, revision conflicts, input validation, and anonymous/direct-write denial inside a transaction that is rolled back.
+
+Authenticated users can read only their own row. Writes go through `save_injection_profile`, which binds the operation to the authenticated user, validates the history, and checks the previous revision. There is no public directory of profiles. Supabase operates the authentication/database service; project administrators retain administrative database access. The [Supabase Free plan](https://supabase.com/pricing) has usage limits and can pause inactive projects. Browser editing and JSON backups remain available during service outages.
 
 ## Analytics
 
